@@ -7,13 +7,14 @@ import RIP_packet
 
 MAX_BUFF = 600
 MAX_DATA = 512
+INF = 16
 
 class RIProuter:
      def __init__(self,configFile):
           self.configFile = configFile  #Try a 'state' variable?
           self.parse_config()
           self.socket_setup()
-          self.table = [] # to be a list of triplets (dest, D, next-hop)
+          self.routingTable = RoutingTable # to be a list of TableEntry objects
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
           #print('inPorts =',self.inPorts)
@@ -87,19 +88,98 @@ class RIProuter:
           for entry in tail:
                self.timers += [int(entry)]
                
+               
+               
+     def proccess_rip_packet(self, packet):
+          ''' Processes a RIP ver 2 packet'''
+          recieved_distances = [] # list of (dest, distance)
+          n_RTEs = len(packet[8:])//(8*5)
+          #print(n_RTEs)
+          peerID = int(packet[4:8],16)
+          cost = self.outPorts[peerID][1]
           
-     
+          i = 8 # Start of first RTE
+          while i < len(packet):
+               
+               dest = int(packet[i+8:i+16],16) # read dest from RTE
+               metric = int(packet[i+32:i+40],16) # read metric from RTE
+               
+               new_metric = min(metric + cost, INF) # update metric
+               
+               currentEntry = self.routingTable.getEntry(dest)
+               
+               if ((currentEntry is None) and (new_metric < INF)): # Add a new entry
+                    self.routingTable += TableEntry(dest, new_metric, peerID)
+                    # MUST ALSO TRIGGER AN UPDATE HERE
+                    
+               else: # Compare to existing entry
+                    if (currentEntry.nextHop == peerID): # Same router as existing route
+                         currentEntry.timout = 0 # Reinitialise timout
+                         if (new_metric != metric):
+                              currentEntry.metric = new_metric
+                              currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
+                              if (new_metric == INF):
+                                   pass #START DELETION
+                              else:
+                                   currentEntry.timout = 0
+                              
+                    elif (new_metric < metric):
+                         currentEntry.metric = new_metric
+                         currentEntry.nextHop = peerID
+                         currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
+                         if (new_metric == INF):
+                              pass #START DELETION
+                         else:
+                              currentEntry.timout = 0                         
+               
+               
+               
+               
+               i += (8*5) # Proceed to next RTE
+          
+          
+               
+          
+class RoutingTable:
+     def __init__(self):
+          self.table = []
+          
+     def addEntry(self,dest, metric, nextHop):
+          self.table += TableEntry(dest, metric, nextHop)
+          
+     def getEntry(self, dest):
+          ''' returns required table entry if already present'''
+          for Entry in self.table:
+               if Entry.dest == dest:
+                    return Entry
+                    
+          return None
+          
+          
+class TableEntry:
+     def __init__(self,dest, metric, nextHop):
+          self.dest = dest
+          self.metric = metric
+          self.nextHop = nextHop
+          self.flag = 0
+          self.timout = 0
+          self.garbage = 0
+          
 
 def main():
-     configFile = open(sys.argv[1])
+     #configFile = open(sys.argv[1])
+     configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
-     while(1):
-          ## Wait for at least one of the sockets to be ready for processing
-          print('\nwaiting for the next event')
-          readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts)
+     
+     #while(1):
+          ### Wait for at least one of the sockets to be ready for processing
+          #print('\nwaiting for the next event')
+          #readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts)
           
-          for sock in readable:
-               data, sender = sock.recvfrom(MAX_BUFF)
+          #for sock in readable:
+               ##data, sender = sock.recvfrom(MAX_BUFF)
+               #packet = sock.recv(MAX_BUFF)
+               #router.proccess_rip_packet(packet)
                
     
 main()
