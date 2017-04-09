@@ -1,0 +1,1 @@
+1) slight change made to config file format such that commas are at the ends of the first entry (the head) of each line.
