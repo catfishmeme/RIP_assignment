@@ -1,0 +1,351 @@
+https://pymotw.com/2/select/
+
+select – Wait for I/O Efficiently
+Purpose:	Wait for notification that an input or output channel is ready.
+Available In:	1.4 and later
+
+The select module provides access to platform-specific I/O monitoring functions. The most portable interface is the POSIX function select(), which is available on Unix and Windows. The module also includes poll(), a Unix-only API, and several options that only work with specific variants of Unix.
+select()
+
+Python’s select() function is a direct interface to the underlying operating system implementation. It monitors sockets, open files, and pipes (anything with a fileno() method that returns a valid file descriptor) until they become readable or writable, or a communication error occurs. select() makes it easier to monitor multiple connections at the same time, and is more efficient than writing a polling loop in Python using socket timeouts, because the monitoring happens in the operating system network layer, instead of the interpreter.
+
+Note
+
+Using Python’s file objects with select() works for Unix, but is not supported under Windows.
+
+The echo server example from the socket section can be extended to watch for more than one connection at a time by using select(). The new version starts out by creating a non-blocking TCP/IP socket and configuring it to listen on an address.
+
+import select
+import socket
+import sys
+import Queue
+
+# Create a TCP/IP socket
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setblocking(0)
+
+# Bind the socket to the port
+server_address = ('localhost', 10000)
+print >>sys.stderr, 'starting up on %s port %s' % server_address
+server.bind(server_address)
+
+# Listen for incoming connections
+server.listen(5)
+
+The arguments to select() are three lists containing communication channels to monitor. The first is a list of the objects to be checked for incoming data to be read, the second contains objects that will receive outgoing data when there is room in their buffer, and the third those that may have an error (usually a combination of the input and output channel objects). The next step in the server is to set up the lists containing input sources and output destinations to be passed to select().
+
+# Sockets from which we expect to read
+inputs = [ server ]
+
+# Sockets to which we expect to write
+outputs = [ ]
+
+Connections are added to and removed from these lists by the server main loop. Since this version of the server is going to wait for a socket to become writable before sending any data (instead of immediately sending the reply), each output connection needs a queue to act as a buffer for the data to be sent through it.
+
+# Outgoing message queues (socket:Queue)
+message_queues = {}
+
+The main portion of the server program loops, calling select() to block and wait for network activity.
+
+while inputs:
+
+    # Wait for at least one of the sockets to be ready for processing
+    print >>sys.stderr, '\nwaiting for the next event'
+    readable, writable, exceptional = select.select(inputs, outputs, inputs)
+
+select() returns three new lists, containing subsets of the contents of the lists passed in. All of the sockets in the readable list have incoming data buffered and available to be read. All of the sockets in the writable list have free space in their buffer and can be written to. The sockets returned in exceptional have had an error (the actual definition of “exceptional condition” depends on the platform).
+
+The “readable” sockets represent three possible cases. If the socket is the main “server” socket, the one being used to listen for connections, then the “readable” condition means it is ready to accept another incoming connection. In addition to adding the new connection to the list of inputs to monitor, this section sets the client socket to not block.
+
+    # Handle inputs
+    for s in readable:
+
+        if s is server:
+            # A "readable" server socket is ready to accept a connection
+            connection, client_address = s.accept()
+            print >>sys.stderr, 'new connection from', client_address
+            connection.setblocking(0)
+            inputs.append(connection)
+
+            # Give the connection a queue for data we want to send
+            message_queues[connection] = Queue.Queue()
+
+The next case is an established connection with a client that has sent data. The data is read with recv(), then placed on the queue so it can be sent through the socket and back to the client.
+
+        else:
+            data = s.recv(1024)
+            if data:
+                # A readable client socket has data
+                print >>sys.stderr, 'received "%s" from %s' % (data, s.getpeername())
+                message_queues[s].put(data)
+                # Add output channel for response
+                if s not in outputs:
+                    outputs.append(s)
+
+A readable socket without data available is from a client that has disconnected, and the stream is ready to be closed.
+
+            else:
+                # Interpret empty result as closed connection
+                print >>sys.stderr, 'closing', client_address, 'after reading no data'
+                # Stop listening for input on the connection
+                if s in outputs:
+                    outputs.remove(s)
+                inputs.remove(s)
+                s.close()
+
+                # Remove message queue
+                del message_queues[s]
+
+There are fewer cases for the writable connections. If there is data in the queue for a connection, the next message is sent. Otherwise, the connection is removed from the list of output connections so that the next time through the loop select() does not indicate that the socket is ready to send data.
+
+    # Handle outputs
+    for s in writable:
+        try:
+            next_msg = message_queues[s].get_nowait()
+        except Queue.Empty:
+            # No messages waiting so stop checking for writability.
+            print >>sys.stderr, 'output queue for', s.getpeername(), 'is empty'
+            outputs.remove(s)
+        else:
+            print >>sys.stderr, 'sending "%s" to %s' % (next_msg, s.getpeername())
+            s.send(next_msg)
+
+Finally, if there is an error with a socket, it is closed.
+
+    # Handle "exceptional conditions"
+    for s in exceptional:
+        print >>sys.stderr, 'handling exceptional condition for', s.getpeername()
+        # Stop listening for input on the connection
+        inputs.remove(s)
+        if s in outputs:
+            outputs.remove(s)
+        s.close()
+
+        # Remove message queue
+        del message_queues[s]
+
+The example client program uses two sockets to demonstrate how the server with select() manages multiple connections at the same time. The client starts by connecting each TCP/IP socket to the server.
+
+import socket
+import sys
+
+messages = [ 'This is the message. ',
+             'It will be sent ',
+             'in parts.',
+             ]
+server_address = ('localhost', 10000)
+
+# Create a TCP/IP socket
+socks = [ socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+          socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+          ]
+
+# Connect the socket to the port where the server is listening
+print >>sys.stderr, 'connecting to %s port %s' % server_address
+for s in socks:
+    s.connect(server_address)
+
+Then it sends one pieces of the message at a time via each socket, and reads all responses available after writing new data.
+
+for message in messages:
+
+    # Send messages on both sockets
+    for s in socks:
+        print >>sys.stderr, '%s: sending "%s"' % (s.getsockname(), message)
+        s.send(message)
+
+    # Read responses on both sockets
+    for s in socks:
+        data = s.recv(1024)
+        print >>sys.stderr, '%s: received "%s"' % (s.getsockname(), data)
+        if not data:
+            print >>sys.stderr, 'closing socket', s.getsockname()
+            s.close()
+
+Run the server in one window and the client in another. The output will look like this, with different port numbers.
+
+$ python ./select_echo_server.py
+starting up on localhost port 10000
+
+waiting for the next event
+new connection from ('127.0.0.1', 55821)
+
+waiting for the next event
+new connection from ('127.0.0.1', 55822)
+received "This is the message. " from ('127.0.0.1', 55821)
+
+waiting for the next event
+sending "This is the message. " to ('127.0.0.1', 55821)
+
+waiting for the next event
+output queue for ('127.0.0.1', 55821) is empty
+
+waiting for the next event
+received "This is the message. " from ('127.0.0.1', 55822)
+
+waiting for the next event
+sending "This is the message. " to ('127.0.0.1', 55822)
+
+waiting for the next event
+output queue for ('127.0.0.1', 55822) is empty
+
+waiting for the next event
+received "It will be sent " from ('127.0.0.1', 55821)
+received "It will be sent " from ('127.0.0.1', 55822)
+
+waiting for the next event
+sending "It will be sent " to ('127.0.0.1', 55821)
+sending "It will be sent " to ('127.0.0.1', 55822)
+
+waiting for the next event
+output queue for ('127.0.0.1', 55821) is empty
+output queue for ('127.0.0.1', 55822) is empty
+
+waiting for the next event
+received "in parts." from ('127.0.0.1', 55821)
+received "in parts." from ('127.0.0.1', 55822)
+
+waiting for the next event
+sending "in parts." to ('127.0.0.1', 55821)
+sending "in parts." to ('127.0.0.1', 55822)
+
+waiting for the next event
+output queue for ('127.0.0.1', 55821) is empty
+output queue for ('127.0.0.1', 55822) is empty
+
+waiting for the next event
+closing ('127.0.0.1', 55822) after reading no data
+closing ('127.0.0.1', 55822) after reading no data
+
+waiting for the next event
+
+The client output shows the data being sent and received using both sockets.
+
+$ python ./select_echo_multiclient.py
+connecting to localhost port 10000
+('127.0.0.1', 55821): sending "This is the message. "
+('127.0.0.1', 55822): sending "This is the message. "
+('127.0.0.1', 55821): received "This is the message. "
+('127.0.0.1', 55822): received "This is the message. "
+('127.0.0.1', 55821): sending "It will be sent "
+('127.0.0.1', 55822): sending "It will be sent "
+('127.0.0.1', 55821): received "It will be sent "
+('127.0.0.1', 55822): received "It will be sent "
+('127.0.0.1', 55821): sending "in parts."
+('127.0.0.1', 55822): sending "in parts."
+('127.0.0.1', 55821): received "in parts."
+('127.0.0.1', 55822): received "in parts."
+
+Timeouts
+
+select() also takes an optional fourth parameter which is the number of seconds to wait before breaking off monitoring if no channels have become active. Using a timeout value lets a main program call select() as part of a larger processing loop, taking other actions in between checking for network input.
+
+When the timeout expires, select() returns three empty lists. Updating the server example to use a timeout requires adding the extra argument to the select() call and handling the empty lists after select() returns.
+
+    # Wait for at least one of the sockets to be ready for processing
+    print >>sys.stderr, '\nwaiting for the next event'
+    timeout = 1
+    readable, writable, exceptional = select.select(inputs, outputs, inputs, timeout)
+
+    if not (readable or writable or exceptional):
+        print >>sys.stderr, '  timed out, do some other work here'
+        continue
+
+This “slow” version of the client program pauses after sending each message, to simulate latency or other delay in transmission.
+
+import socket
+import sys
+import time
+
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Connect the socket to the port where the server is listening
+server_address = ('localhost', 10000)
+print >>sys.stderr, 'connecting to %s port %s' % server_address
+sock.connect(server_address)
+
+time.sleep(1)
+
+messages = [ 'Part one of the message.',
+             'Part two of the message.',
+             ]
+amount_expected = len(''.join(messages))
+
+try:
+
+    # Send data
+    for message in messages:
+        print >>sys.stderr, 'sending "%s"' % message
+        sock.sendall(message)
+        time.sleep(1.5)
+
+    # Look for the response
+    amount_received = 0
+    
+    while amount_received < amount_expected:
+        data = sock.recv(16)
+        amount_received += len(data)
+        print >>sys.stderr, 'received "%s"' % data
+
+finally:
+    print >>sys.stderr, 'closing socket'
+    sock.close()
+
+Running the new server with the slow client produces:
+
+$ python ./select_echo_server_timeout.py
+starting up on localhost port 10000
+
+waiting for the next event
+  timed out
+
+waiting for the next event
+  timed out
+
+waiting for the next event
+new connection from ('127.0.0.1', 57776)
+
+waiting for the next event
+received "Part one of the message." from ('127.0.0.1', 57776)
+
+waiting for the next event
+sending "Part one of the message." to ('127.0.0.1', 57776)
+
+waiting for the next event
+output queue for ('127.0.0.1', 57776) is empty
+
+waiting for the next event
+  timed out
+
+waiting for the next event
+received "Part two of the message." from ('127.0.0.1', 57776)
+
+waiting for the next event
+sending "Part two of the message." to ('127.0.0.1', 57776)
+
+waiting for the next event
+output queue for ('127.0.0.1', 57776) is empty
+
+waiting for the next event
+  timed out
+
+waiting for the next event
+closing ('127.0.0.1', 57776) after reading no data
+
+waiting for the next event
+  timed out
+
+waiting for the next event
+
+And the client output is:
+
+$ python ./select_echo_slow_client.py
+connecting to localhost port 10000
+sending "Part one of the message."
+sending "Part two of the message."
+received "Part one of the "
+received "message.Part two"
+received " of the message."
+closing socket
+
