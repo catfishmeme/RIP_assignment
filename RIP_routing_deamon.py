@@ -87,8 +87,6 @@ class RIProuter:
           for entry in tail:
                self.timers += [int(entry)]
                
-               
-
           
      
 
@@ -97,7 +95,11 @@ def main():
      router = RIProuter(configFile)
      while(1):
           ## Wait for at least one of the sockets to be ready for processing
+          print('\nwaiting for the next event')
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts)
-    
+          
+          for sock in readable:
+               data, sender = sock.recvfrom(MAX_BUFF)
+               
     
 main()
