@@ -2,8 +2,11 @@
 import sys
 import select
 import socket 
+import base64
+import RIP_packet
 
-#Random edit
+MAX_BUFF = 600
+MAX_DATA = 512
 
 class RIProuter:
      def __init__(self,configFile):
@@ -41,60 +44,52 @@ class RIProuter:
                lineType = entries[0]
                tail = entries[1:]
                if lineType == 'router-id':
-                    self.routerID = getID(tail)
+                    self.getID(tail)
                     
                elif lineType == 'input-ports':
-                    self.inPort_numbers = getInPort_numbers(tail)
+                    self.getInPort_numbers(tail)
                
                elif lineType == 'outputs':
-                    self.outPorts = getOutPorts(tail)
+                    self.getOutPorts(tail)
                
                elif lineType == 'timers':
-                    self.timers = getTimers(tail)
+                    self.getTimers(tail)
                     
                     
+     def getID(self,tail):
+          myID = int(tail[0]) 
+          if myID in range(1,64001):
+               self.routerID = int(tail[0])
           
-               
-                    
-      
-
-
-def getID(tail):
-     myID = int(tail[0])
-     if myID in range(1,64001):
-          return myID
-     
-     else:
-          raise(IndexError('Router ID not valid'))     
-     
-     
-def getInPort_numbers(tail):
-     ports = []
-     for portstring in tail:
-          port = int(portstring)
-          if (port not in ports) and (port in range(1024,64001)):
-               ports += [port]
           else:
-               print("invalid inport port {} supplied".format(port))
-     return ports
-
-def getOutPorts(tail):
-     portinfo = []
-     for triplet in tail:
-          portN,metric,peerID = triplet.split('-')
-          portinfo += [[int(portN),int(metric),int(peerID)]]
-     return portinfo
-
-
-def getTimers(tail):
-     timers = []
-     for entry in tail:
-          timers += [int(entry)]
-          
-     return timers
+               raise(IndexError('Router ID not valid'))     
      
+     
+     def getInPort_numbers(self,tail):
+          self.inPort_numbers = []
+          for portstring in tail:
+               port = int(portstring)
+               if (port not in self.inPort_numbers) and (port in range(1024,64001)):
+                    self.inPort_numbers += [port]
+               else:
+                    print("invalid inport port {} supplied".format(port))
                
-     
+
+     def getOutPorts(self,tail):
+          self.outPorts = []
+          for triplet in tail:
+               portN,metric,peerID = triplet.split('-')
+               self.outPorts += [[int(portN),int(metric),int(peerID)]]
+
+
+     def getTimers(self,tail):
+          self.timers = []
+          for entry in tail:
+               self.timers += [int(entry)]
+               
+               
+
+          
      
 
 def main():
