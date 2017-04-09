@@ -76,10 +76,10 @@ class RIProuter:
                
 
      def getOutPorts(self,tail):
-          self.outPorts = []
+          self.outPorts = dict()
           for triplet in tail:
                portN,metric,peerID = triplet.split('-')
-               self.outPorts += [[int(portN),int(metric),int(peerID)]]
+               self.outPorts[int(peerID)] = (int(portN),int(metric))
 
 
      def getTimers(self,tail):
