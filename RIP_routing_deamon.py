@@ -191,14 +191,11 @@ class RoutingTable:
                i += 1
                
      def __repr__(self):
-          blank = "-" * 48
-          to_print = blank + "\n(dest, metric, nextHop, flag, timeout, garbage)\n"
+          blank = "-" * 54
+          print(blank + "\n| dest | metric | nextHop | flag | timeout | garbage |")
           for Entry in self.table:
-               to_print += str(Entry) + '\n'
-               
-          to_print += blank
-          
-          return to_print
+               print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8} |{:>8} |".format(Entry.dest, Entry.metric, Entry.nextHop, Entry.flag, Entry.timeout, Entry.garbage))
+          return blank
           
      def addEntry(self,dest, metric, nextHop):
           self.table += [TableEntry(dest, metric, nextHop)]
