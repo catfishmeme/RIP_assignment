@@ -23,9 +23,10 @@ class RIProuter:
           
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
-          #print('inPorts =',self.inPorts)
+         
           print('peerInfo =',self.peerInfo)
           print('timers =',self.timers)
+          print('table=',self.routingTable)
           
           
      def socket_setup(self):
@@ -144,7 +145,7 @@ class RIProuter:
                if ((currentEntry is None) and (new_metric < INF)): # Add a new entry
                     NewEntry = TableEntry(dest, new_metric, peerID)
                     print('new Entry {}'.format(NewEntry))
-                    self.routingTable += NewEntry
+                    self.routingTable.addEntry(dest, new_metric, peerID)
                     # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
@@ -230,13 +231,13 @@ class TableEntry:
      def __repr__(self):
           # Could format this more nicely (Ryan) :)
           return str((self.dest, self.metric,
-                      self.nextHop, self.flag, self.timout, self.garbage))
+                      self.nextHop, self.flag, self.timeout, self.garbage))
           
           
 
 def main():
-     #configFile = open(sys.argv[1])
-     configFile = open("router1.conf") # Just for developement
+     configFile = open(sys.argv[1])
+     #configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
@@ -249,7 +250,7 @@ def main():
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
           for sock in readable:
-               #data, sender = sock.recvfrom(MAX_BUFF)
+               
                packet = sock.recv(MAX_BUFF).decode('UTF-8')
                print('processing packet')
                router.proccess_rip_packet(packet)
