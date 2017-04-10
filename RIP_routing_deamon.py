@@ -230,7 +230,6 @@ class TableEntry:
           self.garbage = 0
           
      def __repr__(self):
-          # Could format this more nicely (Ryan) :)
           return str((self.dest, self.metric,
                       self.nextHop, self.flag, self.timeout, self.garbage))
           
@@ -264,13 +263,14 @@ def main():
                router.SendUpdates()
                router.periodic = 0 # Reset periodic timer
                
-          for Entry in router.routingTable:
-               Entry.timeout += timeInc
+          for Entry in router.routingTable:     
                
-               if (Entry.timeout > router.timers[1]):
+               if (Entry.timeout >= router.timers[1]):
                     Entry.flag = 1 # Set garbage flag
-               
-               if (Entry.flag != 0):
+                    
+               if (Entry.flag == 0):
+                    Entry.timeout += timeInc
+               else:
                     Entry.garbage += timeInc
                     if (Entry.garbage > router.timers[2]): # Garbage collection
                          router.routingTable.removeEntry(Entry)
