@@ -181,7 +181,7 @@ class RoutingTable:
                i += 1
                
      def __repr__(self):
-          blank = "------------------------------------------------"
+          blank = "-" * 48
           to_print = blank + "\n(dest, metric, nextHop, flag, timeout, garbage)\n"
           for Entry in self.table:
                to_print += str(Entry) + '\n'
