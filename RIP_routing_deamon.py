@@ -19,14 +19,14 @@ class RIProuter:
           self.parse_config()
           self.socket_setup()
           self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
-          #self.routingTable.addEntry(self.routerID, 0, self.routerID) # 'self' entry
+          
           
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
          
           print('peerInfo =',self.peerInfo)
           print('timers =',self.timers)
-          print('table=',self.routingTable)
+          print('table=\n',self.routingTable)
           
           
      def socket_setup(self):
@@ -128,22 +128,22 @@ class RIProuter:
           ''' Processes a RIP packet'''
           recieved_distances = [] # list of (dest, distance)
           n_RTEs = len(packet[8:])//(8*5)
-          #print(n_RTEs)
+          
           peerID = int(packet[4:8],16)
           cost = self.peerInfo[peerID][1]
           
           # Consider direct link to peer Router
           incomingEntry = self.routingTable.getEntry(peerID)
           if incomingEntry is None:
-               print("added directlink entry to {}".format(peerID))
+               print("added directlink entry to router {}".format(peerID))
                self.routingTable.addEntry(peerID, cost, peerID)
                
           
           i = 8 # Start of first RTE
           while i < len(packet):
                
-               dest = int(packet[i+8:i+16],16) # read dest from RTE
-               metric = int(packet[i+32:i+40],16) # read metric from RTE
+               dest = int(packet[i+8:i+16],16) # Read dest from RTE
+               metric = int(packet[i+32:i+40],16) # Read metric from RTE
                
                new_metric = min(metric + cost, INF) # update metric
                
@@ -154,7 +154,7 @@ class RIProuter:
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
                          self.routingTable.addEntry(dest, new_metric, peerID)
-                         # DO NOT NEED TO TRIGGER AN UPDATE HERE
+                         
                     
                else: # Compare to existing entry
                     #currentEntry.setstate0()
@@ -182,8 +182,6 @@ class RIProuter:
                                                  
                
                
-               
-               
                i += (8*5) # Proceed to next RTE
           
           
@@ -205,7 +203,10 @@ class RoutingTable:
           blank = "-" * 54
           print(blank + "\n| dest | metric | nextHop | flag | timeout | garbage |")
           for Entry in self.table:
-               print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8} |{:>8} |".format(Entry.dest, Entry.metric, Entry.nextHop, Entry.flag, Entry.timeout, Entry.garbage))
+               print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8} |{:>8} |".format(
+                    Entry.dest, Entry.metric, Entry.nextHop, Entry.flag,
+                    Entry.timeout, Entry.garbage))
+               
           return blank
           
      def addEntry(self,dest, metric, nextHop):
@@ -223,11 +224,6 @@ class RoutingTable:
                     
           return None
      
-     #def deleteEvent(self, Entry):
-          #''' Begins deletion of an entry'''
-          #Entry.garbage = self.garbageMax # eg) 120 seconds
-          #Entry.metric = INF
-          #Entry.flag = 1
           
           
 class TableEntry:
