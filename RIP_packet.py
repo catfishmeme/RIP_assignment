@@ -1,7 +1,5 @@
 # REMEMBER bytes.hex() and bytes.fromhex()
 
-#testing git123
-
 def bytes_to_int(byte_string):
      return int.from_bytes(byte_string, byteorder='big')
 
