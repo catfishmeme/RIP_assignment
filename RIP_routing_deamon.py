@@ -140,7 +140,9 @@ class RIProuter:
                currentEntry = self.routingTable.getEntry(dest)
                
                if ((currentEntry is None) and (new_metric < INF)): # Add a new entry
-                    self.routingTable += TableEntry(dest, new_metric, peerID)
+                    NewEntry = TableEntry(dest, new_metric, peerID)
+                    print('new Entry {}'.format(NewEntry))
+                    self.routingTable += NewEntry
                     # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
@@ -231,8 +233,8 @@ class TableEntry:
           
 
 def main():
-     #configFile = open(sys.argv[1])
-     configFile = open("router1.conf") # Just for developement
+     configFile = open(sys.argv[1])
+     #configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
@@ -247,6 +249,7 @@ def main():
           for sock in readable:
                #data, sender = sock.recvfrom(MAX_BUFF)
                packet = sock.recv(MAX_BUFF).decode('UTF-8')
+               print('processing packet')
                router.proccess_rip_packet(packet)
           
           timeInc = (time.time() - starttime) #finds the time taken on processing
@@ -275,4 +278,4 @@ t.addEntry(5, 3, 3)
 
 # HI :):):):):)
     
-#main()
+main()
