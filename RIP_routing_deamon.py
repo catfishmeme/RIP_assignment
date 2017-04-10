@@ -14,11 +14,11 @@ class RIProuter:
           self.configFile = configFile  #Try a 'state' variable?
           self.parse_config()
           self.socket_setup()
-          self.routingTable = RoutingTable # to be a list of TableEntry objects
+          self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
           #print('inPorts =',self.inPorts)
-          print('outports =',self.outPorts)
+          print('peerInfo =',self.peerInfo)
           print('timers =',self.timers)
           
           
@@ -35,7 +35,6 @@ class RIProuter:
           for port in self.inPorts:
                port.close()               
                      
-          
                 
      def parse_config(self):
           lines = self.configFile.readlines()
@@ -51,7 +50,7 @@ class RIProuter:
                     self.getInPort_numbers(tail)
                
                elif lineType == 'outputs':
-                    self.getOutPorts(tail)
+                    self.getpeerInfo(tail)
                
                elif lineType == 'timers':
                     self.getTimers(tail)
@@ -76,11 +75,11 @@ class RIProuter:
                     print("invalid inport port {} supplied".format(port))
                
 
-     def getOutPorts(self,tail):
-          self.outPorts = dict()
+     def getpeerInfo(self,tail):
+          self.peerInfo = dict()
           for triplet in tail:
                portN,metric,peerID = triplet.split('-')
-               self.outPorts[int(peerID)] = (int(portN),int(metric))
+               self.peerInfo[int(peerID)] = (int(portN),int(metric))
 
 
      def getTimers(self,tail):
@@ -90,13 +89,30 @@ class RIProuter:
                
                
                
+     def triggeredUpdate(self):
+          for peerID in peerInfo.keys(): # change peerInfo to peerInfo
+               response = self.responsePacket(peerID)
+               # SOMEHOW SEND PACKET
+     
+     def periodicUpdate(self):
+          pass
+     
+     def responsePacket(self, peerID):
+          packet = ""
+          packet += rip_header(self.routerID)
+          for Entry in self.routingTable:
+               # Implement split horizon
+               packet += RTE(Entry)
+          
+          return packet
+               
      def proccess_rip_packet(self, packet):
-          ''' Processes a RIP ver 2 packet'''
+          ''' Processes a RIP packet'''
           recieved_distances = [] # list of (dest, distance)
           n_RTEs = len(packet[8:])//(8*5)
           #print(n_RTEs)
           peerID = int(packet[4:8],16)
-          cost = self.outPorts[peerID][1]
+          cost = self.peerInfo[peerID][1]
           
           i = 8 # Start of first RTE
           while i < len(packet):
@@ -110,18 +126,18 @@ class RIProuter:
                
                if ((currentEntry is None) and (new_metric < INF)): # Add a new entry
                     self.routingTable += TableEntry(dest, new_metric, peerID)
-                    # MUST ALSO TRIGGER AN UPDATE HERE
+                    # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
+                    currentEntry.timout = 0 # Reinitialise timout
+                    
                     if (currentEntry.nextHop == peerID): # Same router as existing route
-                         currentEntry.timout = 0 # Reinitialise timout
                          if (new_metric != metric):
                               currentEntry.metric = new_metric
-                              currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
+                              currentEntry.flag = 1
                               if (new_metric == INF):
                                    pass #START DELETION
-                              else:
-                                   currentEntry.timout = 0
+                              
                               
                     elif (new_metric < metric):
                          currentEntry.metric = new_metric
@@ -129,8 +145,7 @@ class RIProuter:
                          currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
                          if (new_metric == INF):
                               pass #START DELETION
-                         else:
-                              currentEntry.timout = 0                         
+                                                 
                
                
                
@@ -141,11 +156,19 @@ class RIProuter:
                
           
 class RoutingTable:
-     def __init__(self):
+     def __init__(self, timoutMax, garbageMax):
           self.table = []
+          self.timoutMax = timoutMax
+          self.garbageMax = garbageMax
+          
+     def __iter__(self):
+          i = 0
+          while i < len(self.table):
+               yield(self.table[i])
+               i += 1
           
      def addEntry(self,dest, metric, nextHop):
-          self.table += TableEntry(dest, metric, nextHop)
+          self.table += [TableEntry(dest, metric, nextHop)]
           
      def getEntry(self, dest):
           ''' returns required table entry if already present'''
@@ -154,6 +177,13 @@ class RoutingTable:
                     return Entry
                     
           return None
+     
+     def deleteEvent(self, Entry):
+          ''' Begins deletion of an entry'''
+          Entry.garbage = self.garbageMax # eg) 120 seconds
+          Entry.metric = INF
+          Entry.flag = 1
+          # TRIGGER RESPONCE HERE
           
           
 class TableEntry:
@@ -164,6 +194,7 @@ class TableEntry:
           self.flag = 0
           self.timout = 0
           self.garbage = 0
+          
           
 
 def main():
@@ -180,6 +211,12 @@ def main():
                ##data, sender = sock.recvfrom(MAX_BUFF)
                #packet = sock.recv(MAX_BUFF)
                #router.proccess_rip_packet(packet)
-               
+             
+             
+# Small developement test case
+t = RoutingTable(18,12)
+t.addEntry(2, 4, 3)
+t.addEntry(1, 5, 6)
+t.addEntry(5, 3, 3)
     
 main()
