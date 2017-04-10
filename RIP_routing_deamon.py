@@ -282,7 +282,5 @@ t = RoutingTable(18,12)
 t.addEntry(2, 4, 3)
 t.addEntry(1, 5, 6)
 t.addEntry(5, 3, 3)
-
-# HI :):):):):)
     
 #main()
