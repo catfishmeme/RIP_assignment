@@ -149,8 +149,10 @@ class RIProuter:
                     # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
+                    #currentEntry.setstate0()
                     currentEntry.timeout = 0 # Reinitialise timeout
                     currentEntry.flag = 0
+                    currentEntry.garbage = 0
                     
                     if (currentEntry.nextHop == peerID): # Same router as existing route
                          if (new_metric != metric):
@@ -158,16 +160,17 @@ class RIProuter:
                               
                               if (new_metric == INF):
                                    currentEntry.flag = 1
-                                   pass #START DELETION
+                                   #START DELETION
                               
                               
                     elif (new_metric < metric):
                          print("update route to {}".format(dest))
                          currentEntry.metric = new_metric
                          currentEntry.nextHop = peerID
-                         currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
+                         #MUST ALSO TRIGGER AN UPDATE HERE
                          if (new_metric == INF):
-                              pass #START DELETION
+                              currentEntry.flag = 1
+                              #START DELETION
                                                  
                
                
@@ -212,12 +215,11 @@ class RoutingTable:
                     
           return None
      
-     def deleteEvent(self, Entry):
-          ''' Begins deletion of an entry'''
-          Entry.garbage = self.garbageMax # eg) 120 seconds
-          Entry.metric = INF
-          Entry.flag = 1
-          # TRIGGER RESPONCE HERE
+     #def deleteEvent(self, Entry):
+          #''' Begins deletion of an entry'''
+          #Entry.garbage = self.garbageMax # eg) 120 seconds
+          #Entry.metric = INF
+          #Entry.flag = 1
           
           
 class TableEntry:
@@ -237,8 +239,8 @@ class TableEntry:
           
 
 def main():
-     #configFile = open(sys.argv[1])
-     configFile = open("router1.conf") # Just for developement
+     configFile = open(sys.argv[1])
+     #configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
@@ -283,4 +285,4 @@ t.addEntry(2, 4, 3)
 t.addEntry(1, 5, 6)
 t.addEntry(5, 3, 3)
     
-#main()
+main()
