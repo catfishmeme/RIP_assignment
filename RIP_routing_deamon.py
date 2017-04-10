@@ -195,6 +195,9 @@ class RoutingTable:
      def addEntry(self,dest, metric, nextHop):
           self.table += [TableEntry(dest, metric, nextHop)]
           
+     def removeEntry(self, Entry):
+          self.table.remove(Entry)
+          
      def getEntry(self, dest):
           ''' returns required table entry if already present'''
           for Entry in self.table:
@@ -259,6 +262,8 @@ def main():
                
                if (Entry.flag != 0) or (Entry.metric >= 16):
                     Entry.garbage += timeInc
+                    if (Entry.garbage > router.timers[2]): # Garbage collection
+                         router.routingTable.removeEntry(Entry)
              
              
              
@@ -268,4 +273,4 @@ t.addEntry(2, 4, 3)
 t.addEntry(1, 5, 6)
 t.addEntry(5, 3, 3)
     
-main()
+#main()
