@@ -201,16 +201,27 @@ def main():
      #configFile = open(sys.argv[1])
      configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
+     selecttimeout = 0.5
+     
+     #starttime = time.time() #Gets the start time before processing
      
      #while(1):
           ### Wait for at least one of the sockets to be ready for processing
+          
           #print('\nwaiting for the next event')
-          #readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts)
+          #readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
           #for sock in readable:
                ##data, sender = sock.recvfrom(MAX_BUFF)
                #packet = sock.recv(MAX_BUFF)
                #router.proccess_rip_packet(packet)
+          
+          #timeInc = (time.time() - starttime) #finds the time taken on processing
+          #starttime = time.time()
+          #for Entry in router.routingtable:
+               #Entry.timeout += timeInc
+               #if Entry.flag != 0 || Entry.metric >= 16:
+                    #Entry.garbage += timeInc
              
              
 # Small developement test case
