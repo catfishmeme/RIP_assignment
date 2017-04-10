@@ -19,6 +19,8 @@ class RIProuter:
           self.parse_config()
           self.socket_setup()
           self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
+          self.routingTable.addEntry(self.routerID, 0, self.routerID) # 'self' entry
+          
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
           #print('inPorts =',self.inPorts)
@@ -222,7 +224,7 @@ class TableEntry:
           self.metric = metric
           self.nextHop = nextHop
           self.flag = 0
-          self.timout = 0
+          self.timeout = 0
           self.garbage = 0
           
      def __repr__(self):
@@ -233,8 +235,8 @@ class TableEntry:
           
 
 def main():
-     configFile = open(sys.argv[1])
-     #configFile = open("router1.conf") # Just for developement
+     #configFile = open(sys.argv[1])
+     configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
