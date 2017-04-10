@@ -4,6 +4,7 @@ import select
 import socket 
 import base64
 import RIP_packet
+import time
 
 MAX_BUFF = 600
 MAX_DATA = 512
@@ -11,6 +12,7 @@ INF = 16
 
 class RIProuter:
      def __init__(self,configFile):
+          self.periodic = 0
           self.configFile = configFile  #Try a 'state' variable?
           self.parse_config()
           self.socket_setup()
@@ -32,6 +34,7 @@ class RIProuter:
                
                
      def close_sockets(self):
+          ''' Close all sockets'''
           for port in self.inPorts:
                port.close()               
                      
@@ -44,19 +47,19 @@ class RIProuter:
                lineType = entries[0]
                tail = entries[1:]
                if lineType == 'router-id':
-                    self.getID(tail)
+                    self.setID(tail)
                     
                elif lineType == 'input-ports':
-                    self.getInPort_numbers(tail)
+                    self.setInPort_numbers(tail)
                
                elif lineType == 'outputs':
-                    self.getpeerInfo(tail)
+                    self.setpeerInfo(tail)
                
                elif lineType == 'timers':
-                    self.getTimers(tail)
+                    self.setTimers(tail)
                     
                     
-     def getID(self,tail):
+     def setID(self,tail):
           myID = int(tail[0]) 
           if myID in range(1,64001):
                self.routerID = int(tail[0])
@@ -65,7 +68,7 @@ class RIProuter:
                raise(IndexError('Router ID not valid'))     
      
      
-     def getInPort_numbers(self,tail):
+     def setInPort_numbers(self,tail):
           self.inPort_numbers = []
           for portstring in tail:
                port = int(portstring)
@@ -75,33 +78,43 @@ class RIProuter:
                     print("invalid inport port {} supplied".format(port))
                
 
-     def getpeerInfo(self,tail):
+     def setpeerInfo(self,tail):
           self.peerInfo = dict()
           for triplet in tail:
                portN,metric,peerID = triplet.split('-')
                self.peerInfo[int(peerID)] = (int(portN),int(metric))
 
 
-     def getTimers(self,tail):
+     def setTimers(self,tail):
           self.timers = []
           for entry in tail:
                self.timers += [int(entry)]
                
                
                
-     def triggeredUpdate(self):
-          for peerID in peerInfo.keys(): # change peerInfo to peerInfo
+     def SendUpdates(self):
+          i = 0
+          peers = peerinfo.keys()
+          while (i < len(peers)):
+               peerID = peers[i]
+               OutSock = self.inPorts[i]
+               
+               peerPort = peerInfo[peerID]
                response = self.responsePacket(peerID)
                # SOMEHOW SEND PACKET
-     
-     def periodicUpdate(self):
-          pass
+               OutSock.send(respnce.encode('UTF-8'))
+               
+               i += 1 # next peer and next sending socket
      
      def responsePacket(self, peerID):
+          ''' Construct a response packet suitable for a periodic or triggered update'''
           packet = ""
           packet += rip_header(self.routerID)
           for Entry in self.routingTable:
                # Implement split horizon
+               if (Entry.dest == peerID):
+                    Entry = TableEntry(Entry.dest, INF, Entry.nextHop) # set metric to INF
+                    
                packet += RTE(Entry)
           
           return packet
@@ -166,6 +179,16 @@ class RoutingTable:
           while i < len(self.table):
                yield(self.table[i])
                i += 1
+               
+     def __repr__(self):
+          blank = "------------------------------------------------"
+          to_print = blank + "\n(dest, metric, nextHop, flag, timeout, garbage)\n"
+          for Entry in self.table:
+               to_print += str(Entry) + '\n'
+               
+          to_print += blank
+          
+          return to_print
           
      def addEntry(self,dest, metric, nextHop):
           self.table += [TableEntry(dest, metric, nextHop)]
@@ -195,6 +218,11 @@ class TableEntry:
           self.timout = 0
           self.garbage = 0
           
+     def __repr__(self):
+          # Could format this more nicely (Ryan) :)
+          return str((self.dest, self.metric,
+                      self.nextHop, self.flag, self.timout, self.garbage))
+          
           
 
 def main():
@@ -222,6 +250,7 @@ def main():
                #Entry.timeout += timeInc
                #if Entry.flag != 0 || Entry.metric >= 16:
                     #Entry.garbage += timeInc
+             
              
              
 # Small developement test case
