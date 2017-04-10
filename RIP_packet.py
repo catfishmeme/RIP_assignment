@@ -6,11 +6,11 @@ def bytes_to_int(byte_string):
 def int_to_bytes(myint,size):
      return (myint).to_bytes(size, byteorder='big')
 
-def hexstring_to_bin(hexstring):
-     return bin(int(hexstring, base=16))
+#def hexstring_to_bin(hexstring):
+     #return bin(int(hexstring, base=16))
 
-def bin_to_hexstring(binum):
-     return hex(int(binum,base = 2))
+#def bin_to_hexstring(binum):
+     #return hex(int(binum,base = 2))
 
 
 def rip_header(routerID):

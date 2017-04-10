@@ -19,7 +19,7 @@ class RIProuter:
           self.parse_config()
           self.socket_setup()
           self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
-          self.routingTable.addEntry(self.routerID, 0, self.routerID) # 'self' entry
+          #self.routingTable.addEntry(self.routerID, 0, self.routerID) # 'self' entry
           
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
@@ -132,7 +132,12 @@ class RIProuter:
           peerID = int(packet[4:8],16)
           cost = self.peerInfo[peerID][1]
           
-          
+          # Consider direct link to peer Router
+          incomingEntry = self.routingTable.getEntry(peerID)
+          if incomingEntry is None:
+               print("added directlink entry to {}".format(peerID))
+               self.routingTable.addEntry(peerID, cost, peerID)
+               
           
           i = 8 # Start of first RTE
           while i < len(packet):
@@ -144,11 +149,12 @@ class RIProuter:
                
                currentEntry = self.routingTable.getEntry(dest)
                
-               if ((currentEntry is None) and (new_metric < INF)): # Add a new entry
-                    NewEntry = TableEntry(dest, new_metric, peerID)
-                    print('new Entry {}'.format(NewEntry))
-                    self.routingTable.addEntry(dest, new_metric, peerID)
-                    # DO NOT NEED TO TRIGGER AN UPDATE HERE
+               if (currentEntry is None):
+                    if (new_metric < INF): # Add a new entry
+                         NewEntry = TableEntry(dest, new_metric, peerID)
+                         print('new Entry {}'.format(NewEntry))
+                         self.routingTable.addEntry(dest, new_metric, peerID)
+                         # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
                     #currentEntry.setstate0()
@@ -279,7 +285,7 @@ def main():
                else:
                     Entry.garbage += timeInc
                     if (Entry.garbage > router.timers[2]): # Garbage collection
-                         print('Removed')
+                         print('Removed {}'.format(Entry))
                          router.routingTable.removeEntry(Entry)
              
              
