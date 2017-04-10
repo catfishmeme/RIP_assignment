@@ -258,7 +258,6 @@ def main():
                router.proccess_rip_packet(packet)
           
           timeInc = (time.time() - starttime) #finds the time taken on processing
-          print(timeInc)
           starttime = time.time()
           router.periodic += timeInc
           
