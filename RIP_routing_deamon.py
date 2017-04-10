@@ -3,12 +3,14 @@ import sys
 import select
 import socket 
 import base64
-import RIP_packet
+from RIP_packet import *
 import time
 
 MAX_BUFF = 600
 MAX_DATA = 512
 INF = 16
+HOST_ID = '127.0.0.1'
+
 
 class RIProuter:
      def __init__(self,configFile):
@@ -94,17 +96,17 @@ class RIProuter:
                
      def SendUpdates(self):
           i = 0
-          peers = peerinfo.keys()
-          while (i < len(peers)):
-               peerID = peers[i]
+          for peerID in self.peerInfo.keys():
                OutSock = self.inPorts[i]
                
-               peerPort = peerInfo[peerID]
+               peerPort = self.peerInfo[peerID][0]
                response = self.responsePacket(peerID)
                # SOMEHOW SEND PACKET
-               OutSock.send(respnce.encode('UTF-8'))
+               #OutSock.connect((HOST_ID,peerPort))
+               OutSock.sendto(response.encode('UTF-8'),(HOST_ID,peerPort))
                
-               i += 1 # next peer and next sending socket
+               i += 1
+               
      
      def responsePacket(self, peerID):
           ''' Construct a response packet suitable for a periodic or triggered update'''
@@ -231,25 +233,32 @@ def main():
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
-     #starttime = time.time() #Gets the start time before processing
+     starttime = time.time() #Gets the start time before processing
      
-     #while(1):
-          ### Wait for at least one of the sockets to be ready for processing
+     while(1):
+          ## Wait for at least one of the sockets to be ready for processing
           
-          #print('\nwaiting for the next event')
-          #readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
+          print('\nwaiting for the next event')
+          readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
-          #for sock in readable:
-               ##data, sender = sock.recvfrom(MAX_BUFF)
-               #packet = sock.recv(MAX_BUFF)
-               #router.proccess_rip_packet(packet)
+          for sock in readable:
+               #data, sender = sock.recvfrom(MAX_BUFF)
+               packet = sock.recv(MAX_BUFF).decode('UTF-8')
+               router.proccess_rip_packet(packet)
           
-          #timeInc = (time.time() - starttime) #finds the time taken on processing
-          #starttime = time.time()
-          #for Entry in router.routingtable:
-               #Entry.timeout += timeInc
-               #if Entry.flag != 0 || Entry.metric >= 16:
-                    #Entry.garbage += timeInc
+          timeInc = (time.time() - starttime) #finds the time taken on processing
+          starttime = time.time()
+          router.periodic += timeInc
+          
+          if (router.periodic >= router.timers[0]): # Periodic update
+               router.SendUpdates()
+               router.periodic = 0 # Reset periodic timer
+               
+          for Entry in router.routingTable:
+               Entry.timeout += timeInc
+               
+               if (Entry.flag != 0) or (Entry.metric >= 16):
+                    Entry.garbage += timeInc
              
              
              
