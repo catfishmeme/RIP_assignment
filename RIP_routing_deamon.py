@@ -132,6 +132,8 @@ class RIProuter:
           peerID = int(packet[4:8],16)
           cost = self.peerInfo[peerID][1]
           
+          
+          
           i = 8 # Start of first RTE
           while i < len(packet):
                
