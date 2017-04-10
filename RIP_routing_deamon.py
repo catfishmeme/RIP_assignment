@@ -149,17 +149,20 @@ class RIProuter:
                     # DO NOT NEED TO TRIGGER AN UPDATE HERE
                     
                else: # Compare to existing entry
-                    currentEntry.timout = 0 # Reinitialise timout
+                    currentEntry.timeout = 0 # Reinitialise timeout
+                    currentEntry.flag = 0
                     
                     if (currentEntry.nextHop == peerID): # Same router as existing route
                          if (new_metric != metric):
                               currentEntry.metric = new_metric
-                              currentEntry.flag = 1
+                              
                               if (new_metric == INF):
+                                   currentEntry.flag = 1
                                    pass #START DELETION
                               
                               
                     elif (new_metric < metric):
+                         print("update route to {}".format(dest))
                          currentEntry.metric = new_metric
                          currentEntry.nextHop = peerID
                          currentEntry.flag = 1# MUST ALSO TRIGGER AN UPDATE HERE
@@ -176,9 +179,9 @@ class RIProuter:
                
           
 class RoutingTable:
-     def __init__(self, timoutMax, garbageMax):
+     def __init__(self, timeoutMax, garbageMax):
           self.table = []
-          self.timoutMax = timoutMax
+          self.timeoutMax = timeoutMax
           self.garbageMax = garbageMax
           
      def __iter__(self):
@@ -201,6 +204,7 @@ class RoutingTable:
           self.table += [TableEntry(dest, metric, nextHop)]
           
      def removeEntry(self, Entry):
+          print("Entry {} removed".format(Entry))
           self.table.remove(Entry)
           
      def getEntry(self, dest):
@@ -236,8 +240,8 @@ class TableEntry:
           
 
 def main():
-     configFile = open(sys.argv[1])
-     #configFile = open("router1.conf") # Just for developement
+     #configFile = open(sys.argv[1])
+     configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
@@ -266,7 +270,10 @@ def main():
           for Entry in router.routingTable:
                Entry.timeout += timeInc
                
-               if (Entry.flag != 0) or (Entry.metric >= 16):
+               if (Entry.timeout > router.timers[1]):
+                    Entry.flag = 1 # Set garbage flag
+               
+               if (Entry.flag != 0):
                     Entry.garbage += timeInc
                     if (Entry.garbage > router.timers[2]): # Garbage collection
                          router.routingTable.removeEntry(Entry)
@@ -281,4 +288,4 @@ t.addEntry(5, 3, 3)
 
 # HI :):):):):)
     
-main()
+#main()
