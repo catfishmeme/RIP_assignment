@@ -18,7 +18,7 @@ HOST_ID = '127.0.0.1'
 class RIProuter:
      def __init__(self,configFile):
           self.periodic = 0
-          self.state = 0
+          self.updateFlag = 0
           self.configFile = configFile  
           self.parse_config()
           self.socket_setup()
@@ -200,7 +200,7 @@ class RIProuter:
                     
           if (new_metric >= INF):
                print("Triggered update flag set")
-               self.state = 1 #Set some update flag                               
+               self.updateFlag = 1 #Set some update flag                               
                currentEntry.garbageFlag = 1                                     
           
           
@@ -280,9 +280,9 @@ def main():
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
           # Send triggered updates at this stage
-          if (router.state == 1):
+          if (router.updateFlag == 1):
                router.SendUpdates()
-               router.state = 0
+               router.updateFlag = 0
           
           for sock in readable:
                
@@ -312,7 +312,7 @@ def main():
                     if (Entry.timeout >= router.timers[1]): # timeout/delete event
                          print('Timeout')
                          Entry.metric = INF
-                         router.state = 1 # require triggered update
+                         router.updateFlag = 1 # require triggered update
                          Entry.garbageFlag = 1 # Set garbage flag                    
                
                          
