@@ -197,7 +197,7 @@ class RIProuter:
           currentEntry.metric = new_metric
           currentEntry.nextHop = peerID
                     
-          if (new_metric == INF):
+          if (new_metric >= INF):
                print("Triggered update flag set")
                self.state = 1#Set some update flag                               
                currentEntry.garbageFlag = 1                                     
