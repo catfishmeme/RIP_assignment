@@ -22,7 +22,7 @@ class RIProuter:
           self.configFile = configFile  
           self.parse_config()
           self.socket_setup()
-          self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
+          self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # timeout and garbage considered
           
           
           print('routerID =',self.routerID)
@@ -34,11 +34,10 @@ class RIProuter:
           
           
      def socket_setup(self):
-          #host = socket.gethostname()
           self.inPorts = []
           for portn in self.inPort_numbers:
                newSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-               newSocket.bind(('127.0.0.1', portn)) # binding may be incorrect
+               newSocket.bind((HOST_ID, portn))
                self.inPorts += [newSocket]
                
                
@@ -49,6 +48,7 @@ class RIProuter:
                      
                 
      def parse_config(self):
+          ''' Parse the supplied config file'''
           lines = self.configFile.readlines()
           for line in lines:
                entries = line.split(',')
@@ -121,7 +121,7 @@ class RIProuter:
           packet += rip_header(self.routerID)
           for Entry in self.routingTable:
                # Implement split horizon with poisson reverse
-               if (Entry.nextHop == peerID):
+               if (Entry.nextHop == peerID) or (Entry.garbageFlag == 1):
                     print("split horizon entry sent to {}".format(peerID))
                     packet += RTE(TableEntry(Entry.dest, INF, Entry.nextHop)) # set metric to INF
                else:
@@ -169,7 +169,7 @@ class RIProuter:
                          
                     
                else: # Compare to existing entry
-                    #currentEntry.setstate0()
+                    
                     print("Existing entry for {}".format(dest))
                     if (currentEntry.nextHop == peerID): # Same router as existing route
                          
@@ -177,12 +177,12 @@ class RIProuter:
                          currentEntry.garbageFlag = 0
                          currentEntry.garbage = 0
                          
-                         if (new_metric != metric):
+                         if (new_metric != currentEntry.metric):
                               self.existingRouteUpdate(currentEntry, new_metric, peerID)                                 
                                    
                               
                               
-                    elif (new_metric < metric):
+                    elif (new_metric < currentEntry.metric):
                          print("update route to {}".format(dest))
                          self.existingRouteUpdate(currentEntry, new_metric, peerID)     
                                                            
@@ -195,11 +195,12 @@ class RIProuter:
                
      def existingRouteUpdate(self, currentEntry, new_metric, peerID):
           currentEntry.metric = new_metric
+          print("route to {} updated to metric = {}".format(currentEntry.dest,new_metric))
           currentEntry.nextHop = peerID
                     
           if (new_metric >= INF):
                print("Triggered update flag set")
-               self.state = 1#Set some update flag                               
+               self.state = 1 #Set some update flag                               
                currentEntry.garbageFlag = 1                                     
           
           
@@ -300,17 +301,20 @@ def main():
                
           for Entry in router.routingTable:     
                
-               if (Entry.timeout >= router.timers[1]):
-                    print('Timeout')
-                    Entry.garbageFlag = 1 # Set garbage flag
-                    
-               if (Entry.garbageFlag == 0):
-                    Entry.timeout += timeInc
-               else:
+               if (Entry.garbageFlag == 1):
                     Entry.garbage += timeInc
-                    if (Entry.garbage > router.timers[2]): # Garbage collection
+                    if (Entry.garbage >= router.timers[2]): # Garbage collection
                          print('Removed {}'.format(Entry))
-                         router.routingTable.removeEntry(Entry)
+                         router.routingTable.removeEntry(Entry)                    
+                    
+               else:
+                    Entry.timeout += timeInc
+                    if (Entry.timeout >= router.timers[1]): # timeout/delete event
+                         print('Timeout')
+                         Entry.metric = INF
+                         router.state = 1 # require triggered update
+                         Entry.garbageFlag = 1 # Set garbage flag                    
+               
                          
           
              
@@ -321,5 +325,8 @@ t = RoutingTable(18,12)
 t.addEntry(2, 4, 3)
 t.addEntry(1, 5, 6)
 t.addEntry(5, 3, 3)
+
+for Entry in t:
+     pass
     
 main()
