@@ -221,7 +221,7 @@ class RoutingTable:
           blank = "-" * 54
           print(blank + "\n| dest | metric | nextHop | flag | timeout | garbage |")
           for Entry in self.table:
-               print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8} |{:>8} |".format(
+               print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8.3f} |{:>8.3f} |".format(
                     Entry.dest, Entry.metric, Entry.nextHop, Entry.garbageFlag,
                     Entry.timeout, Entry.garbage))
                
