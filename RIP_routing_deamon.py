@@ -133,8 +133,8 @@ class RIProuter:
           ''' Processes a RIP packet'''
           recieved_distances = [] # list of (dest, distance)
           n_RTEs = len(packet[8:])//(8*5)
-          
-          peerID = int(packet[4:8],16)
+          """Check packet feilds are correct here"""
+          peerID = int(packet[4:8],16) #"""Check around here if peerID is in valid range"""
           print("Proccessing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
@@ -156,7 +156,7 @@ class RIProuter:
                metric = int(packet[i+32:i+40],16) # Read metric from RTE
                
                new_metric = min(metric + cost, INF) # update metric
-               
+               """check metric here?"""
                currentEntry = self.routingTable.getEntry(dest)
               
                
