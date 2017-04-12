@@ -11,11 +11,15 @@ MAX_DATA = 512
 INF = 16
 HOST_ID = '127.0.0.1'
 
+# STATES: 0 -> Waiting for input with periodic updates
+#         1 -> Needs to send a triggered update
+
 
 class RIProuter:
      def __init__(self,configFile):
           self.periodic = 0
-          self.configFile = configFile  #Try a 'state' variable?
+          self.state = 0
+          self.configFile = configFile  
           self.parse_config()
           self.socket_setup()
           self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # to be a list of TableEntry objects
@@ -100,12 +104,12 @@ class RIProuter:
      def SendUpdates(self):
           i = 0
           for peerID in self.peerInfo.keys():
+               print("update sent to {}".format(peerID))
                OutSock = self.inPorts[i]
                
                peerPort = self.peerInfo[peerID][0]
                response = self.responsePacket(peerID)
-               # SOMEHOW SEND PACKET
-               #OutSock.connect((HOST_ID,peerPort))
+               
                OutSock.sendto(response.encode('UTF-8'),(HOST_ID,peerPort))
                
                i += 1
@@ -117,10 +121,10 @@ class RIProuter:
           packet += rip_header(self.routerID)
           for Entry in self.routingTable:
                # Implement split horizon
-               if (Entry.dest == peerID):
-                    Entry = TableEntry(Entry.dest, INF, Entry.nextHop) # set metric to INF
-                    
-               packet += RTE(Entry)
+               if (Entry.nextHop == peerID):
+                    packet += RTE(TableEntry(Entry.dest, INF, Entry.nextHop)) # set metric to INF
+               else:
+                    packet += RTE(Entry)
           
           return packet
                
@@ -130,6 +134,7 @@ class RIProuter:
           n_RTEs = len(packet[8:])//(8*5)
           
           peerID = int(packet[4:8],16)
+          print("Proccessing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
           # Consider direct link to peer Router
@@ -137,6 +142,10 @@ class RIProuter:
           if incomingEntry is None:
                print("added directlink entry to router {}".format(peerID))
                self.routingTable.addEntry(peerID, cost, peerID)
+          else:
+               incomingEntry.timeout = 0 # Reinitialise timeout for this link
+               incomingEntry.garbageFlag = 0
+               incomingEntry.garbage = 0               
                
           
           i = 8 # Start of first RTE
@@ -148,8 +157,10 @@ class RIProuter:
                new_metric = min(metric + cost, INF) # update metric
                
                currentEntry = self.routingTable.getEntry(dest)
+              
                
                if (currentEntry is None):
+                    print("current entry is NONE!")
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
@@ -158,27 +169,33 @@ class RIProuter:
                     
                else: # Compare to existing entry
                     #currentEntry.setstate0()
-                    currentEntry.timeout = 0 # Reinitialise timeout
-                    currentEntry.flag = 0
-                    currentEntry.garbage = 0
-                    
+                    print("Existing entry for {}".format(dest))
                     if (currentEntry.nextHop == peerID): # Same router as existing route
+                         
+                         currentEntry.timeout = 0 # Reinitialise timeout
+                         currentEntry.garbageFlag = 0
+                         currentEntry.garbage = 0
+                         
                          if (new_metric != metric):
                               currentEntry.metric = new_metric
+                              print("Triggered update flag set")
+                              self.state = 1 #Set some update flag
                               
                               if (new_metric == INF):
-                                   currentEntry.flag = 1
-                                   #START DELETION
+                                   currentEntry.garbageFlag = 1
+                                   
                               
                               
                     elif (new_metric < metric):
                          print("update route to {}".format(dest))
                          currentEntry.metric = new_metric
                          currentEntry.nextHop = peerID
-                         #MUST ALSO TRIGGER AN UPDATE HERE
+                         print("Triggered update flag set")
+                         self.state = 1#Set some update flag
+                         
                          if (new_metric == INF):
-                              currentEntry.flag = 1
-                              #START DELETION
+                              currentEntry.garbageFlag = 1
+                              
                                                  
                
                
@@ -204,7 +221,7 @@ class RoutingTable:
           print(blank + "\n| dest | metric | nextHop | flag | timeout | garbage |")
           for Entry in self.table:
                print("|{:>5} |{:>7} |{:>8} |{:>5} |{:>8} |{:>8} |".format(
-                    Entry.dest, Entry.metric, Entry.nextHop, Entry.flag,
+                    Entry.dest, Entry.metric, Entry.nextHop, Entry.garbageFlag,
                     Entry.timeout, Entry.garbage))
                
           return blank
@@ -218,9 +235,13 @@ class RoutingTable:
           
      def getEntry(self, dest):
           ''' returns required table entry if already present'''
-          for Entry in self.table:
+          i = 0
+          while i < len(self.table):
+               Entry = self.table[i]
                if Entry.dest == dest:
                     return Entry
+               
+               i += 1
                     
           return None
      
@@ -231,13 +252,13 @@ class TableEntry:
           self.dest = dest
           self.metric = metric
           self.nextHop = nextHop
-          self.flag = 0
+          self.garbageFlag = 0
           self.timeout = 0
           self.garbage = 0
           
      def __repr__(self):
           return str((self.dest, self.metric,
-                      self.nextHop, self.flag, self.timeout, self.garbage))
+                      self.nextHop, self.garbageFlag, self.timeout, self.garbage))
           
           
 
@@ -251,17 +272,23 @@ def main():
      
      while(1):
           ## Wait for at least one of the sockets to be ready for processing
+          print("table reads\n",router.routingTable)
           
-          print('\nwaiting for the next event')
+          #print('\nwaiting for the next event')
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
+          
+          ## Send triggered updates at this stage
+          if (router.state == 1):
+               router.SendUpdates()
+               router.state = 0
           
           for sock in readable:
                
                packet = sock.recv(MAX_BUFF).decode('UTF-8')
-               print('processing packet')
                router.proccess_rip_packet(packet)
           
           timeInc = (time.time() - starttime) #finds the time taken on processing
+          #print("proc time = {}".format(timeInc))
           starttime = time.time()
           router.periodic += timeInc
           
@@ -274,15 +301,17 @@ def main():
                
                if (Entry.timeout >= router.timers[1]):
                     print('Timeout')
-                    Entry.flag = 1 # Set garbage flag
+                    Entry.garbageFlag = 1 # Set garbage flag
                     
-               if (Entry.flag == 0):
+               if (Entry.garbageFlag == 0):
                     Entry.timeout += timeInc
                else:
                     Entry.garbage += timeInc
                     if (Entry.garbage > router.timers[2]): # Garbage collection
                          print('Removed {}'.format(Entry))
                          router.routingTable.removeEntry(Entry)
+                         
+          
              
              
              
