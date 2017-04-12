@@ -120,8 +120,9 @@ class RIProuter:
           packet = ""
           packet += rip_header(self.routerID)
           for Entry in self.routingTable:
-               # Implement split horizon
+               # Implement split horizon with poisson reverse
                if (Entry.nextHop == peerID):
+                    print("split horizon entry sent to {}".format(peerID))
                     packet += RTE(TableEntry(Entry.dest, INF, Entry.nextHop)) # set metric to INF
                else:
                     packet += RTE(Entry)
@@ -177,29 +178,29 @@ class RIProuter:
                          currentEntry.garbage = 0
                          
                          if (new_metric != metric):
-                              currentEntry.metric = new_metric
-                              print("Triggered update flag set")
-                              self.state = 1 #Set some update flag
-                              
-                              if (new_metric == INF):
-                                   currentEntry.garbageFlag = 1
+                              self.existingRouteUpdate(currentEntry, new_metric, peerID)                                 
                                    
                               
                               
                     elif (new_metric < metric):
                          print("update route to {}".format(dest))
-                         currentEntry.metric = new_metric
-                         currentEntry.nextHop = peerID
-                         print("Triggered update flag set")
-                         self.state = 1#Set some update flag
-                         
-                         if (new_metric == INF):
-                              currentEntry.garbageFlag = 1
+                         self.existingRouteUpdate(currentEntry, new_metric, peerID)     
+                                                           
                               
                                                  
                
                
                i += (8*5) # Proceed to next RTE
+               
+               
+     def existingRouteUpdate(self, currentEntry, new_metric, peerID):
+          currentEntry.metric = new_metric
+          currentEntry.nextHop = peerID
+                    
+          if (new_metric == INF):
+               print("Triggered update flag set")
+               self.state = 1#Set some update flag                               
+               currentEntry.garbageFlag = 1                                     
           
           
                
@@ -277,7 +278,7 @@ def main():
           #print('\nwaiting for the next event')
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
-          ## Send triggered updates at this stage
+          # Send triggered updates at this stage
           if (router.state == 1):
                router.SendUpdates()
                router.state = 0
