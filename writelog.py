@@ -1,12 +1,12 @@
 from time import *
-import os
+import inspect
 
 def init_log(ID):
     """Initialises the log with an ID for the file"""
     filename = "runlog_" + str(ID) + ".log"
     program_log = open(filename, 'w')
     program_log.write("Log File for {} in program {}\n{}\n"
-                      .format(ID, os.path.basename(__file__), "/" * 100))
+                      .format(ID, inspect.stack()[1][1], "/" * 100))
     write_to_log(program_log, "Log Started")
     return program_log
 
