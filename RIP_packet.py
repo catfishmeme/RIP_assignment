@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # REMEMBER bytes.hex() and bytes.fromhex()
 
 def bytes_to_int(byte_string):
