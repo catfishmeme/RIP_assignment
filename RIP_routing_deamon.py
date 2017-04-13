@@ -2,7 +2,7 @@
 import sys
 import select
 import socket 
-#import base64
+import random
 from RIP_packet import *
 import time
 
@@ -171,12 +171,12 @@ class RIProuter:
                metric = int(packet[i+32:i+40],16) # Read metric from RTE
                
                new_metric = min(metric + cost, INF) # update metric
-<<<<<<< HEAD
+
                """check metric here?"""
                currentEntry = self.routingTable.get_entry(dest)
-=======
-               currentEntry = self.routingTable.getEntry(dest)
->>>>>>> f847627d43012b135903d19b4b0f37c03da5e658
+
+               currentEntry = self.routingTable.get_entry(dest)
+
               
                if new_metric >= INF:
                     print("Metric grater than {} and so is unreachable".format(INF))
@@ -187,12 +187,11 @@ class RIProuter:
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
-<<<<<<< HEAD
+
                          self.routingTable.add_entry(dest, new_metric, peerID)
                          
-=======
+
                          self.routingTable.addEntry(dest, new_metric, peerID)
->>>>>>> f847627d43012b135903d19b4b0f37c03da5e658
                     
                else: # Compare to existing entry
                     
@@ -296,6 +295,8 @@ def main():
      router = RIProuter(configFile)
      selecttimeout = 0.5
      
+     periodicWaitTime = router.timers[0]
+     
      starttime = time.time() #Gets the start time before processing
      
      while(1):
@@ -319,8 +320,11 @@ def main():
           starttime = time.time()
           router.periodic += timeInc
           
-          if (router.periodic >= router.timers[0]): # Periodic update
+          if (router.periodic >= periodicWaitTime): # Periodic update
                router.send_updates()
+               #Recalculate new random wait time in [0.8*periodic, 1.2*periodic]
+               periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
+               
                router.periodic = 0 # Reset periodic timer
                print("Periodic update")
                
