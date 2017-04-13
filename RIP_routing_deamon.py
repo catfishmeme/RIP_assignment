@@ -280,7 +280,6 @@ def main():
           ## Wait for at least one of the sockets to be ready for processing
           print("table reads\n",router.routingTable)
           
-          #print('\nwaiting for the next event')
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
           # Send triggered updates at this stage
