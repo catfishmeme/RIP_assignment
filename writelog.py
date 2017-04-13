@@ -2,6 +2,7 @@ from time import *
 import os
 
 def init_log(ID):
+    """Initialises the log with an ID for the file"""
     filename = "runlog_" + str(ID) + ".log"
     program_log = open(filename, 'w')
     program_log.write("Log File for {} in program {}\n{}\n"
@@ -10,10 +11,12 @@ def init_log(ID):
     return program_log
 
 def write_to_log(log, string):
+    """takes a log object and writes the given string and timestamps it"""
     logtime = strftime("[%H:%M:%S %d/%m/%Y] ", gmtime())
     log.write(logtime + string + '\n')
     
 def close_log(log):
+    """closes the file"""
     write_to_log(log, "Log Ended")
     log.close()
     

@@ -327,7 +327,6 @@ def main():
                periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
                
                router.periodic = 0 # Reset periodic timer
-               close_log(router.log)
                print("Periodic update")
                
           for Entry in router.routingTable:     
