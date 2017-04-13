@@ -1,7 +1,8 @@
-\usepackage{listings}
-
 
 \documentclass[12pt,twoside]{article}
+
+\usepackage{listings}
+\usepackage{color}
 
 \pagestyle{myheadings}
 \textwidth 160mm
@@ -48,8 +49,16 @@
 \lstset{style=mystyle}
 
 
-\subsection{Python code: }
-\lstinputlisting[language=python]{RIP_routing_deamon.py}
+\section{Main Program}
+\lstinputlisting[language=python]{RIP_routing_demon.py}
+\newpage
+
+\section{RIPpacket}
+\lstinputlisting[language=python]{RIP_packet.py}
+\newpage
+
+\section{writelog}
+\lstinputlisting[language=python]{writelog.py}
 \newpage
 
 
