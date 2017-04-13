@@ -114,6 +114,8 @@ class RIProuter:
           i = 0
           for peerID in self.peerInfo.keys():
                print("update sent to {}".format(peerID))
+               write_to_log(router.log,
+                            "Sent update to {}".format(peerID))
                OutSock = self.inPorts[i] # use a different socket to send each
                
                peerPort = self.peerInfo[peerID][0]
@@ -149,6 +151,7 @@ class RIProuter:
           
           if peerID < 1 or peerID > 64000:
                print("[Error] peerID {} out of range".format(peerID))
+               write_to_log(router.log, "[Error] peerID {} out of range".format(peerID))
                #need to do something here 
                
           print("Proccessing packet from {}".format(peerID))
@@ -181,6 +184,8 @@ class RIProuter:
               
                if new_metric >= INF:
                     print("Metric grater than {} and so is unreachable".format(INF))
+                    write_to_log(router.log, 
+                                 "[Error] Metric grater than {} and so is unreachable".format(INF))
                     #do something here
                
                if (currentEntry is None):
@@ -188,7 +193,9 @@ class RIProuter:
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
-
+                         write_to_log(router.log,
+                                      "New route added from {} to {} with Metric {}"
+                                      .format(router.routerID, NewEntry, new_metric))
                          self.routingTable.add_entry(dest, new_metric, peerID)
                          
 
@@ -210,6 +217,9 @@ class RIProuter:
                               
                     elif (new_metric < currentEntry.metric):
                          print("update route to {}".format(dest))
+                         write_to_log(router.log,
+                                      "Route from {} to {} updated with new Metric {}"
+                                      .format(router.routerID, NewEntry, new_metric))
                          self.existing_route_update(currentEntry, new_metric, peerID)     
                                                            
                               
@@ -295,7 +305,6 @@ def main():
      #configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
      selecttimeout = 0.5 
-     write_to_log(router.log, "test1")
      periodicWaitTime = router.timers[0]
      
      starttime = time.time() #Gets the start time before processing
@@ -335,12 +344,18 @@ def main():
                     Entry.garbage += timeInc
                     if (Entry.garbage >= router.timers[2]): # Garbage collection
                          print('Removed {}'.format(Entry))
+                         write_to_log(router.log,
+                                      "[Warning] Route from {} to {} has been removed"
+                                      .format(router.routerID, Entry.dest))
                          router.routingTable.remove_entry(Entry)                    
                     
                else:
                     Entry.timeout += timeInc
                     if (Entry.timeout >= router.timers[1]): # timeout/delete event
                          print('Timeout')
+                         write_to_log(router.log, 
+                                      "[Warning] Route from {} to {} has timed out"
+                                      .format(router.routerID, Entry.dest))
                          Entry.metric = INF
                          router.updateFlag = 1 # require triggered update
                          Entry.garbageFlag = 1 # Set garbage flag                    

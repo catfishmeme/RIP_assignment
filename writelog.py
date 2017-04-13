@@ -6,7 +6,7 @@ def init_log(ID):
     filename = "runlog_" + str(ID) + ".log"
     program_log = open(filename, 'w')
     program_log.write("Log File for {} in program {}\n{}\n"
-                      .format(ID, inspect.stack()[1][1], "/" * 100))
+                      .format(ID, inspect.stack()[1][1], "/" * 200))
     write_to_log(program_log, "Log Started")
     return program_log
 
