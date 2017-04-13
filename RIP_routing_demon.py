@@ -310,59 +310,61 @@ def main():
      starttime = time.time() #Gets the start time before processing
      
      while(1):
-          ## Wait for at least one of the sockets to be ready for processing
-          print("table reads\n",router.routingTable)
-          
-          readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
-          
-          # Send triggered updates at this stage
-          if (router.updateFlag == 1):
-               router.send_updates()
-               router.updateFlag = 0
-          
-          for sock in readable:
+          try:
+               ## Wait for at least one of the sockets to be ready for processing
+               print("table reads\n",router.routingTable)
+               readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
                
-               packet = sock.recv(MAX_BUFF).decode('UTF-8')
-               router.proccess_rip_packet(packet)
-          
-          timeInc = (time.time() - starttime) #finds the time taken on processing
-          #print("proc time = {}".format(timeInc))
-          starttime = time.time()
-          router.periodic += timeInc
-          
-          if (router.periodic >= periodicWaitTime): # Periodic update
-               router.send_updates()
-               #Recalculate new random wait time in [0.8*periodic, 1.2*periodic]
-               periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
+               # Send triggered updates at this stage
+               if (router.updateFlag == 1):
+                    router.send_updates()
+                    router.updateFlag = 0
                
-               router.periodic = 0 # Reset periodic timer
-               print("Periodic update")
-               
-          for Entry in router.routingTable:     
-               
-               if (Entry.garbageFlag == 1):
-                    Entry.garbage += timeInc
-                    if (Entry.garbage >= router.timers[2]): # Garbage collection
-                         print('Removed {}'.format(Entry))
-                         write_to_log(router.log,
-                                      "[Warning] Route from {} to {} has been removed"
-                                      .format(router.routerID, Entry.dest))
-                         router.routingTable.remove_entry(Entry)                    
+               for sock in readable:
                     
-               else:
-                    Entry.timeout += timeInc
-                    if (Entry.timeout >= router.timers[1]): # timeout/delete event
-                         print('Timeout')
-                         write_to_log(router.log, 
-                                      "[Warning] Route from {} to {} has timed out"
-                                      .format(router.routerID, Entry.dest))
-                         Entry.metric = INF
-                         router.updateFlag = 1 # require triggered update
-                         Entry.garbageFlag = 1 # Set garbage flag                    
+                    packet = sock.recv(MAX_BUFF).decode('UTF-8')
+                    router.proccess_rip_packet(packet)
                
+               timeInc = (time.time() - starttime) #finds the time taken on processing
+               #print("proc time = {}".format(timeInc))
+               starttime = time.time()
+               router.periodic += timeInc
+               
+               if (router.periodic >= periodicWaitTime): # Periodic update
+                    router.send_updates()
+                    #Recalculate new random wait time in [0.8*periodic, 1.2*periodic]
+                    periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
+                    
+                    router.periodic = 0 # Reset periodic timer
+                    print("Periodic update")
+                    
+               for Entry in router.routingTable:     
+                    
+                    if (Entry.garbageFlag == 1):
+                         Entry.garbage += timeInc
+                         if (Entry.garbage >= router.timers[2]): # Garbage collection
+                              print('Removed {}'.format(Entry))
+                              write_to_log(router.log,
+                                           "[Warning] Route from {} to {} has been removed"
+                                           .format(router.routerID, Entry.dest))
+                              router.routingTable.remove_entry(Entry)                    
                          
-          
-             
+                    else:
+                         Entry.timeout += timeInc
+                         if (Entry.timeout >= router.timers[1]): # timeout/delete event
+                              print('Timeout')
+                              write_to_log(router.log, 
+                                           "[Warning] Route from {} to {} has timed out"
+                                           .format(router.routerID, Entry.dest))
+                              Entry.metric = INF
+                              router.updateFlag = 1 # require triggered update
+                              Entry.garbageFlag = 1 # Set garbage flag     
+                              
+          except KeyboardInterrupt:
+               print("Exiting program")
+               close_log(router.log)
+               router.close_sockets()
+               break
              
              
 # Small developement test case
