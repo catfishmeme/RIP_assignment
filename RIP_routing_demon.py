@@ -183,9 +183,9 @@ class RIProuter:
 
               
                if new_metric >= INF:
-                    print("Metric grater than {} and so is unreachable".format(INF))
+                    print("Metric greater than {} and so is unreachable".format(INF))
                     write_to_log(self.log, 
-                                 "[Error] Metric grater than {} and so is unreachable".format(INF))
+                                 "[Error] path ({},{}) from {} unreachable".format(dest, metric,peerID))
                     #do something here
                
                if (currentEntry is None):
