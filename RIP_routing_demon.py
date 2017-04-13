@@ -183,23 +183,22 @@ class RIProuter:
 
               
                if new_metric >= INF:
-                    print("Metric greater than {} and so is unreachable".format(INF))
+                    print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                     write_to_log(self.log, 
-                                 "[Error] path ({},{}) from {} unreachable".format(dest, metric,peerID))
+                                 "Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                     #do something here
                
                if (currentEntry is None):
-                    print("current entry is NONE!")
+                    print("current route not in table")
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
                          write_to_log(self.log,
                                       "New route added from {} to {} with Metric {}"
                                       .format(self.routerID, NewEntry, new_metric))
-                         self.routingTable.add_entry(dest, new_metric, peerID)
                          
 
-                         self.routingTable.addEntry(dest, new_metric, peerID)
+                         self.routingTable.add_entry(dest, new_metric, peerID)
                     
                else: # Compare to existing entry
                     
@@ -360,7 +359,7 @@ def main():
                               router.updateFlag = 1 # require triggered update
                               Entry.garbageFlag = 1 # Set garbage flag     
                               
-          except KeyboardInterrupt:
+          except KeyboardInterrupt: # 'Taking down' router
                print("Exiting program")
                close_log(router.log)
                router.close_sockets()
