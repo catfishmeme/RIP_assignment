@@ -72,6 +72,7 @@ class RIProuter:
                     
                     
      def set_ID(self,tail):
+          ''' Checks and stores routerID'''
           myID = int(tail[0]) 
           if myID in range(1,64001):
                self.routerID = int(tail[0])
@@ -81,6 +82,7 @@ class RIProuter:
      
      
      def set_InPort_numbers(self,tail):
+          ''' Checks and stores all supplied inport numbers'''
           self.inPort_numbers = []
           for portstring in tail:
                port = int(portstring)
@@ -91,6 +93,7 @@ class RIProuter:
                
 
      def set_peerInfo(self,tail):
+          ''' Stores info relevent to immediate neighbours '''
           self.peerInfo = dict()
           for triplet in tail:
                portN,metric,peerID = triplet.split('-')
@@ -98,6 +101,7 @@ class RIProuter:
 
 
      def set_timers(self,tail):
+          ''' Stores supplied timer info (i.e. periodic, timeout, garbage)'''
           self.timers = []
           for entry in tail:
                self.timers += [int(entry)]
@@ -105,10 +109,11 @@ class RIProuter:
                
                
      def send_updates(self):
+          ''' Sends an update message to each neighbour'''
           i = 0
           for peerID in self.peerInfo.keys():
                print("update sent to {}".format(peerID))
-               OutSock = self.inPorts[i]
+               OutSock = self.inPorts[i] # use a different socket to send each
                
                peerPort = self.peerInfo[peerID][0]
                response = self.response_packet(peerID)
@@ -119,7 +124,9 @@ class RIProuter:
                
      
      def response_packet(self, peerID):
-          ''' Construct a response packet suitable for a periodic or triggered update'''
+          ''' Construct a response packet destined to a neighboring router.
+              Suitable for a periodic or triggered update'''
+          
           packet = ""
           packet += rip_header(self.routerID)
           for Entry in self.routingTable:
@@ -138,9 +145,11 @@ class RIProuter:
           n_RTEs = len(packet[8:])//(8*5)
           """Check packet feilds are correct here"""
           peerID = int(packet[4:8],16)
+          
           if peerID < 1 or peerID > 64000:
                print("[Error] peerID {} out of range".format(peerID))
                #need to do something here 
+               
           print("Proccessing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
