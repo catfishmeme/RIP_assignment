@@ -114,7 +114,7 @@ class RIProuter:
           i = 0
           for peerID in self.peerInfo.keys():
                print("update sent to {}".format(peerID))
-               write_to_log(router.log,
+               write_to_log(self.log,
                             "Sent update to {}".format(peerID))
                OutSock = self.inPorts[i] # use a different socket to send each
                
@@ -151,7 +151,7 @@ class RIProuter:
           
           if peerID < 1 or peerID > 64000:
                print("[Error] peerID {} out of range".format(peerID))
-               write_to_log(router.log, "[Error] peerID {} out of range".format(peerID))
+               write_to_log(self.log, "[Error] peerID {} out of range".format(peerID))
                #need to do something here 
                
           print("Proccessing packet from {}".format(peerID))
@@ -184,7 +184,7 @@ class RIProuter:
               
                if new_metric >= INF:
                     print("Metric grater than {} and so is unreachable".format(INF))
-                    write_to_log(router.log, 
+                    write_to_log(self.log, 
                                  "[Error] Metric grater than {} and so is unreachable".format(INF))
                     #do something here
                
@@ -193,9 +193,9 @@ class RIProuter:
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
-                         write_to_log(router.log,
+                         write_to_log(self.log,
                                       "New route added from {} to {} with Metric {}"
-                                      .format(router.routerID, NewEntry, new_metric))
+                                      .format(self.routerID, NewEntry, new_metric))
                          self.routingTable.add_entry(dest, new_metric, peerID)
                          
 
@@ -217,9 +217,9 @@ class RIProuter:
                               
                     elif (new_metric < currentEntry.metric):
                          print("update route to {}".format(dest))
-                         write_to_log(router.log,
+                         write_to_log(self.log,
                                       "Route from {} to {} updated with new Metric {}"
-                                      .format(router.routerID, NewEntry, new_metric))
+                                      .format(self.routerID, NewEntry, new_metric))
                          self.existing_route_update(currentEntry, new_metric, peerID)     
                                                            
                               
