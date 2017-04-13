@@ -137,7 +137,10 @@ class RIProuter:
           
           n_RTEs = len(packet[8:])//(8*5)
           """Check packet feilds are correct here"""
-          peerID = int(packet[4:8],16) #"""Check around here if peerID is in valid range"""
+          peerID = int(packet[4:8],16)
+          if peerID < 1 or peerID > 64000:
+               print("[Error] peerID {} out of range".format(peerID))
+               #need to do something here 
           print("Proccessing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
@@ -159,17 +162,28 @@ class RIProuter:
                metric = int(packet[i+32:i+40],16) # Read metric from RTE
                
                new_metric = min(metric + cost, INF) # update metric
+<<<<<<< HEAD
                """check metric here?"""
                currentEntry = self.routingTable.get_entry(dest)
+=======
+               currentEntry = self.routingTable.getEntry(dest)
+>>>>>>> f847627d43012b135903d19b4b0f37c03da5e658
               
+               if new_metric >= INF:
+                    print("Metric grater than {} and so is unreachable".format(INF))
+                    #do something here
                
                if (currentEntry is None):
                     print("current entry is NONE!")
                     if (new_metric < INF): # Add a new entry
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
+<<<<<<< HEAD
                          self.routingTable.add_entry(dest, new_metric, peerID)
                          
+=======
+                         self.routingTable.addEntry(dest, new_metric, peerID)
+>>>>>>> f847627d43012b135903d19b4b0f37c03da5e658
                     
                else: # Compare to existing entry
                     
@@ -279,7 +293,6 @@ def main():
           ## Wait for at least one of the sockets to be ready for processing
           print("table reads\n",router.routingTable)
           
-          #print('\nwaiting for the next event')
           readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
           
           # Send triggered updates at this stage
