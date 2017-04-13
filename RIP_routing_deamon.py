@@ -134,7 +134,10 @@ class RIProuter:
           recieved_distances = [] # list of (dest, distance)
           n_RTEs = len(packet[8:])//(8*5)
           """Check packet feilds are correct here"""
-          peerID = int(packet[4:8],16) #"""Check around here if peerID is in valid range"""
+          peerID = int(packet[4:8],16)
+          if peerID < 1 or peerID > 64000:
+               print("[Error] peerID {} out of range".format(peerID))
+               #need to do something here 
           print("Proccessing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
@@ -156,9 +159,11 @@ class RIProuter:
                metric = int(packet[i+32:i+40],16) # Read metric from RTE
                
                new_metric = min(metric + cost, INF) # update metric
-               """check metric here?"""
                currentEntry = self.routingTable.getEntry(dest)
               
+               if new_metric >= INF:
+                    print("Metric grater than {} and so is unreachable".format(INF))
+                    #do something here
                
                if (currentEntry is None):
                     print("current entry is NONE!")
@@ -166,7 +171,6 @@ class RIProuter:
                          NewEntry = TableEntry(dest, new_metric, peerID)
                          print('new Entry {}'.format(NewEntry))
                          self.routingTable.addEntry(dest, new_metric, peerID)
-                         
                     
                else: # Compare to existing entry
                     
