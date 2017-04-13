@@ -4,6 +4,7 @@ import select
 import socket 
 import random
 from RIP_packet import *
+from writelog import *
 import time
 
 MAX_BUFF = 600
@@ -23,7 +24,7 @@ class RIProuter:
           self.parse_config()
           self.socket_setup()
           self.routingTable = RoutingTable(self.timers[1],self.timers[2]) # timeout and garbage considered
-          
+          self.log = init_log(self.routerID)
           
           print('routerID =',self.routerID)
           print('inport numbers =',self.inPort_numbers)
@@ -293,8 +294,8 @@ def main():
      configFile = open(sys.argv[1])
      #configFile = open("router1.conf") # Just for developement
      router = RIProuter(configFile)
-     selecttimeout = 0.5
-     
+     selecttimeout = 0.5 
+     write_to_log(router.log, "test1")
      periodicWaitTime = router.timers[0]
      
      starttime = time.time() #Gets the start time before processing
@@ -326,6 +327,7 @@ def main():
                periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
                
                router.periodic = 0 # Reset periodic timer
+               close_log(router.log)
                print("Periodic update")
                
           for Entry in router.routingTable:     
