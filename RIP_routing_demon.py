@@ -145,9 +145,9 @@ class RIProuter:
      def proccess_rip_packet(self, packet):
           ''' Processes a RIP response packet'''
           
-          n_RTEs = len(packet[8:])//(8*5)
-          """Check packet feilds are correct here"""
-          peerID = int(packet[4:8],16)
+          (peerID,RTEs) = rip_packet_info(packet)
+          
+          #peerID = int(packet[4:8],16)
           
           if peerID < 1 or peerID > 64000:
                print("[Error] peerID {} out of range".format(peerID))
@@ -163,16 +163,14 @@ class RIProuter:
                print("added directlink entry to router {}".format(peerID))
                self.routingTable.add_entry(peerID, cost, peerID)
           else:
+               incomingEntry.metric = cost
                incomingEntry.timeout = 0 # Reinitialise timeout for this link
                incomingEntry.garbageFlag = 0
                incomingEntry.garbage = 0               
                
           
-          i = 8 # Start of first RTE
-          while i < len(packet):
-               
-               dest = int(packet[i+8:i+16],16) # Read dest from RTE
-               metric = int(packet[i+32:i+40],16) # Read metric from RTE
+          
+          for (dest, metric) in RTEs:
                
                new_metric = min(metric + cost, INF) # update metric
 
@@ -225,7 +223,7 @@ class RIProuter:
                                                  
                
                
-               i += (8*5) # Proceed to next RTE
+               
                
                
      def existing_route_update(self, currentEntry, new_metric, peerID):
@@ -365,14 +363,5 @@ def main():
                router.close_sockets()
                break
              
-             
-# Small developement test case
-t = RoutingTable(18,12)
-t.add_entry(2, 4, 3)
-t.add_entry(1, 5, 6)
-t.add_entry(5, 3, 3)
-
-for Entry in t:
-     pass
     
 main()

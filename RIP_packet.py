@@ -27,3 +27,22 @@ def RTE(Entry):
      s+= zero_row
      s+= int_to_bytes(Entry.metric,4)
      return(s)
+
+
+def rip_packet_info(packet):
+     ''' Extracts relevent info from a RIP response packet'''
+     
+     RTEs = []
+     
+     peerID = int(packet[4:8],16)
+     
+     i = 8 # Start of first RTE
+     while i < len(packet):
+          
+          dest = int(packet[i+8:i+16],16) # Read dest from RTE
+          metric = int(packet[i+32:i+40],16) # Read metric from RTE
+          RTEs += [(dest, metric)]
+          
+          i += (8*5) # Proceed to next RTE
+          
+     return(peerID,RTEs)
