@@ -15,6 +15,16 @@ HOST_ID = '127.0.0.1'
 # Router STATES: 0 -> Waiting for input with periodic updates
 #                1 -> Needs to send a triggered update
 
+def valid_portn(portn):
+     return int(portn) in range(1024,64001)
+
+def valid_ID(routerID):
+     return int(routerID) in range(1,64001)
+
+def valid_metric(metric):
+     return int(metric) in range(0,INF+1)
+
+
 
 class RIProuter:
      def __init__(self,configFile):
@@ -75,7 +85,7 @@ class RIProuter:
      def set_ID(self,tail):
           ''' Checks and stores routerID'''
           myID = int(tail[0]) 
-          if myID in range(1,64001):
+          if valid_ID(myID):
                self.routerID = int(tail[0])
           
           else:
@@ -87,7 +97,7 @@ class RIProuter:
           self.inPort_numbers = []
           for portstring in tail:
                port = int(portstring)
-               if (port not in self.inPort_numbers) and (port in range(1024,64001)):
+               if (port not in self.inPort_numbers) and valid_portn(port):
                     self.inPort_numbers += [port]
                else:
                     print("invalid inport port {} supplied".format(port))
@@ -98,7 +108,10 @@ class RIProuter:
           self.peerInfo = dict()
           for triplet in tail:
                portN,metric,peerID = triplet.split('-')
-               self.peerInfo[int(peerID)] = (int(portN),int(metric))
+               if valid_portn(portN) and valid_metric(metric) and valid_ID(peerID):
+                    self.peerInfo[int(peerID)] = (int(portN),int(metric))
+               else:
+                    print("invalid peer info for peer {}".format(peerID))               
 
 
      def set_timers(self,tail):
@@ -142,19 +155,18 @@ class RIProuter:
           
           return packet
                
-     def proccess_rip_packet(self, packet):
+     def process_rip_packet(self, packet):
           ''' Processes a RIP response packet'''
           
           (peerID,RTEs) = rip_packet_info(packet)
           
-          #peerID = int(packet[4:8],16)
           
-          if peerID < 1 or peerID > 64000:
+          if not valid_ID(peerID):
                print("[Error] peerID {} out of range".format(peerID))
                write_to_log(self.log, "[Error] peerID {} out of range".format(peerID))
                #need to do something here 
                
-          print("Proccessing packet from {}".format(peerID))
+          print("processing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
           # Consider direct link to peer Router
@@ -170,54 +182,60 @@ class RIProuter:
                
           
           
-          for (dest, metric) in RTEs:
+          for RTE in RTEs:
+               self.processRTE(RTE, peerID, cost)
                
-               new_metric = min(metric + cost, INF) # update metric
+               
+     def processRTE(self, RTE, peerID, cost):
+          '''processes an RTE of a RIP responce packet from a peer router'''
+          (dest, metric) = RTE
+               
+          new_metric = min(metric + cost, INF) # update metric
 
-               """check metric here?"""
-               currentEntry = self.routingTable.get_entry(dest)
+          """check metric here?"""
+          currentEntry = self.routingTable.get_entry(dest)
 
-               currentEntry = self.routingTable.get_entry(dest)
+          currentEntry = self.routingTable.get_entry(dest)
 
               
-               if new_metric >= INF:
-                    print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
-                    write_to_log(self.log, 
-                                 "Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
+          if new_metric >= INF:
+               print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
+               write_to_log(self.log, 
+                    "Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                     #do something here
                
-               if (currentEntry is None):
-                    print("current route not in table")
-                    if (new_metric < INF): # Add a new entry
-                         NewEntry = TableEntry(dest, new_metric, peerID)
-                         print('new Entry {}'.format(NewEntry))
-                         write_to_log(self.log,
-                                      "New route added from {} to {} with Metric {}"
-                                      .format(self.routerID, NewEntry, new_metric))
+          if (currentEntry is None):
+               print("current route not in table")
+               if (new_metric < INF): # Add a new entry
+                    NewEntry = TableEntry(dest, new_metric, peerID)
+                    print('new Entry {}'.format(NewEntry))
+                    write_to_log(self.log,
+                         "New route added from {} to {} with Metric {}"
+                         .format(self.routerID, NewEntry, new_metric))
                          
 
-                         self.routingTable.add_entry(dest, new_metric, peerID)
+                    self.routingTable.add_entry(dest, new_metric, peerID)
                     
-               else: # Compare to existing entry
+          else: # Compare to existing entry
                     
-                    print("Existing entry for {}".format(dest))
-                    if (currentEntry.nextHop == peerID): # Same router as existing route
+               print("Existing entry for {}".format(dest))
+               if (currentEntry.nextHop == peerID): # Same router as existing route
                          
-                         currentEntry.timeout = 0 # Reinitialise timeout
-                         currentEntry.garbageFlag = 0
-                         currentEntry.garbage = 0
+                    currentEntry.timeout = 0 # Reinitialise timeout
+                    currentEntry.garbageFlag = 0
+                    currentEntry.garbage = 0
                          
-                         if (new_metric != currentEntry.metric):
-                              self.existing_route_update(currentEntry, new_metric, peerID)                                 
+                    if (new_metric != currentEntry.metric):
+                         self.existing_route_update(currentEntry, new_metric, peerID)                                 
                                    
                               
                               
-                    elif (new_metric < currentEntry.metric):
-                         print("update route to {}".format(dest))
-                         write_to_log(self.log,
-                                      "Route from {} to {} updated with new Metric {}"
-                                      .format(self.routerID, NewEntry, new_metric))
-                         self.existing_route_update(currentEntry, new_metric, peerID)     
+               elif (new_metric < currentEntry.metric):
+                    print("update route to {}".format(dest))
+                    write_to_log(self.log,
+                              "Route from {} to {} updated with new Metric {}"
+                              .format(self.routerID, NewEntry, new_metric))
+                    self.existing_route_update(currentEntry, new_metric, peerID)     
                                                            
                               
                                                  
@@ -227,6 +245,7 @@ class RIProuter:
                
                
      def existing_route_update(self, currentEntry, new_metric, peerID):
+          ''' updates an existing routing table entry with a new metric'''
           currentEntry.metric = new_metric
           print("route to {} updated to metric = {}".format(currentEntry.dest,new_metric))
           currentEntry.nextHop = peerID
@@ -320,7 +339,7 @@ def main():
                for sock in readable:
                     
                     packet = sock.recv(MAX_BUFF).decode('UTF-8')
-                    router.proccess_rip_packet(packet)
+                    router.process_rip_packet(packet)
                
                timeInc = (time.time() - starttime) #finds the time taken on processing
                #print("proc time = {}".format(timeInc))
