@@ -22,37 +22,37 @@
 \thispagestyle{empty}
 
 \begin{abstract}
-The following pertains to Assignment 1 of COSC364 S1 2017.
-This was a joint work by George Drummond and Ryan Cox in fulfilment of the course requirements of COSC364 S1 2017 and is a result of \bf{equal} contribution.
+The following documentation pertains to Assignment 1 of COSC364 S1 2017.
+This was a joint work by George Drummond and Ryan Cox in fulfilment of the course requirements of COSC364 S1 2017 and is a result of \bf{equal} contribution ($50\% / 50\%$).
 \end{abstract}
 
 \tableofcontents
 
 \section{ Particularly well done aspects}
 
-One of the initial successes of our design is the decent degree of modulation with which we were able to develop our program. Through the ‘RIP\_packet.py‘ and ‘writelog.py‘ programs, we were able to achieve a reasonable level of abstraction around the tasks of packet processing and logging errors. This led to far easier reading and debugging.\\
+One of the initial successes of our design is the decent degree of modulation with which we were able to develop our program. Through the \textit{RIP\_packet.py} and \textit{writelog.py} programs, we were able to achieve a reasonable level of abstraction around the tasks of packet processing and logging errors. This led to far easier reading and debugging.\\
 
-Within these modulated programs, the methods of constructing and processing the RIP response packet was a strong point in our design. The packet was represented by a python string of hex values and Python’s type conversion abilities were heavily utilised to allow for swift extraction of the relevant information. Again, this was able to be done “under the hood” by the helper program “RIP\_packet.py” avoiding much unnecessary indexing by the main program.\\
+Within these modulated programs, the methods of constructing and processing the RIP response packet was a strong point in our design. The packet was represented by a python string of hex values and Python’s type conversion abilities were heavily utilised to allow for swift extraction of the relevant information. Again, this was able to be done "under the hood" by the helper program \textit{RIP\_packet.py}, avoiding much unnecessary indexing by the main program.\\
 
 These good practices led to a great degree of functionality being achieved by our program. Via the tiered testing method detailed below, we were able to quickly debug and achieve a working (and pretty!) result.
 \section{Aspects to be improved}
 
-One aspect of the program which could have been improved was the way in which we implemented our timing procedures. Though operationally sound, these are not as aesthetically pleasing as they could be, with the precise nature of their operation obscured to the casual observer. This implicit structure would perhaps have been better implemented by an explicit finite automata by defining state variables and functions and working with this as the basis for operation. This would perhaps not only have been nicer to look at but also easier to develop as we could have considered the protocol on a ‘state by state’ basis rather than a ‘conditional’ one.
+One aspect of the program which could have been improved was the way in which we implemented our timing procedures. Though operationally sound, these are not as aesthetically pleasing as they could be, with the precise nature of their operation obscured to the casual observer. This implicit structure would perhaps have been better implemented by an explicit finite automata by defining state variables and functions and working with this as the basis for operation. This would perhaps not only have been nicer to look at but also easier to develop as we could have considered the protocol on a "state by state" basis rather than a "conditional" one.
 
 
 \section{Atomicity of event processing}
 
-Our program is atomic by nature in that each line is executed one at a time with nothing interrupting the program as it runs through the main round robin (fancy use of terminology) loop. In addition to this, the timers have a small element of randomness to them anyway and it’s not crucial that we react to them as soon as they tick over so we only react to them when we get back around to checking them. Every event has its time in the loop to do its thing and then waits while we get back around to it. Crucially, no event can interrupt another event that is running
+Our program is atomic by nature in that each line is executed sequentially with nothing interrupting the program as it runs through the main "round robin" style loop. By not necessarily reacting to timers the moment they "tick over", we introduce a further small element of randomness to the timing procedures. This is beneficial to the RIP routing protocol as it helps to avoid synchronisation of updates. Every "timer event" is addressed in the loop and occurs depending on its respective timer value when addressed. Crucially, no event can interrupt another event that is running.
 
-(The blocking and waiting is the longest part of the time waiting of 0.5 seconds and the processing for the other stuff is about 0.0025 seconds so the chance we miss a packet is low, We are not blocking for \%0.5 of the time (not doing select for \%0.5 on average per program loop)(if we can even miss a packet and if we do we will get it back with the periodic update))
+The blocking and waiting state constitutes the majority of the time, with each call leading to a 0.5 second wait. All other processing amounts to around 0.0025 seconds  per 'loop' so the chance we miss a packet is low. That is, we are not blocking for \%0.5 of the time on average. %We can even miss a packet and if we do we will get it back with the periodic update.
 
-\section{discussion}
-Our primary source for testing during development was our ‘example topology’ of 7 routers configured as follows.
+\section{Discussion}
+Our primary source for testing during development was our "example network" of 7 routers configured as follows.
 
 \begin{figure}[htpb]
 	\centering
 	\includegraphics[width=0.5\textwidth]{Topology_Pic.png} % lots of other options for figure sizing
-	\caption{Sample Topology}
+	\caption{Example Network}
 \end{figure}%
 
 
@@ -110,6 +110,15 @@ A particularly useful tool for debugging was the ‘runlog\_$x$” $x\in \{1,2,3
 \section{writelog}
 \lstinputlisting[language=python]{writelog.py}
 \newpage
+
+\section{Configuration files for Example Network}
+\subsection{router1}\lstinputlisting{router1.conf}
+\subsection{router2}\lstinputlisting{router2.conf}
+\subsection{router3}\lstinputlisting{router3.conf}
+\subsection{router4}\lstinputlisting{router4.conf}
+\subsection{router5}\lstinputlisting{router5.conf}
+\subsection{router6}\lstinputlisting{router6.conf}
+\subsection{router7}\lstinputlisting{router7.conf}
 
 
 
