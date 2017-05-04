@@ -4,10 +4,8 @@
 #         Ryan Cox - rlc96
 #Last Edit: 5/4/2017
 #
-#An implimentation of the version 2 RIP routing protocol, which is loads a router 
-#in a given network from a config file and communicates with other instances of
-#the router to update the topology of the network when new routers are added or
-#go down.
+#Routing demon instance participates in the version 2 RIP routing protocol.
+#Demon emulates a router in a given network from the supplied config file.
 #
 """
 
@@ -176,7 +174,7 @@ class RIProuter:
           if not valid_ID(peerID):
                print("[Error] peerID {} out of range".format(peerID))
                write_to_log(self.log, "[Error] peerID {} out of range".format(peerID))
-               #need to do something here 
+                
                
           print("processing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
