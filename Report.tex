@@ -3,6 +3,7 @@
 
 \usepackage{listings}
 \usepackage{color}
+\usepackage{graphicx}
 
 \pagestyle{myheadings}
 \textwidth 160mm
@@ -14,13 +15,57 @@
 
 \begin{document}
 \title{COSC364 Assignment 1}
-\author{George Drummond, Ryan Cox}
+\author{George Drummond(53243258), \\Ryan Cox(64656394)}
 \maketitle
 \thispagestyle{empty}
 
 \begin{abstract}
-
+This is joint work by George Drummond and Ryan Cox in fulfilment of the course requirements of COSC364 S1 2017 and is a result of \bf{equal} contribution.
 \end{abstract}
+
+\section{ Particularly well done aspects}
+
+One of the initial successes of our design is the decent degree of modulation with which we were able to develop our program. Through the ‘RIP\_packet.py‘ and ‘writelog.py‘ programs, we were able to achieve a reasonable level of abstraction around the tasks of packet processing and logging errors. This led to far easier reading and debugging.
+
+Within these modulated programs, the methods of constructing and processing the RIP response packet was a strong point in our design. The packet was represented by a python string of hex values and Python’s type conversion abilities were heavily utilised to allow for swift extraction of the relevant information. Again, this was able to be done “under the hood” by the helper program “RIP\_packet.py” avoiding much unnecessary indexing by the main program.
+
+These good practices led to a great degree of functionality being achieved by our program. Via the tiered testing method detailed below, we were able to quickly debug and achieve a working (and pretty!) result.
+\section{Aspects to be improved}
+
+One aspect of the program which could have been improved was the way in which we implemented our timing procedures. Though operationally sound, these are not as aesthetically pleasing as they could be, with the precise nature of their operation obscured to the casual observer. This implicit structure would perhaps have been better implemented by an explicit finite automata by defining state variables and functions and working with this as the basis for operation. This would perhaps not only have been nicer to look at but also easier to develop as we could have considered the protocol on a ‘state by state’ basis rather than a ‘conditional’ one.
+
+
+\section{Atomicity of event processing}
+
+Our program is atomic by nature in that each line is executed one at a time with nothing interrupting the program as it runs through the main round robin (fancy use of terminology) loop. In addition to this, the timers have a small element of randomness to them anyway and it’s not crucial that we react to them as soon as they tick over so we only react to them when we get back around to checking them. Every event has its time in the loop to do its thing and then waits while we get back around to it. Crucially, no event can interrupt another event that is running
+
+(The blocking and waiting is the longest part of the time waiting of 0.5 seconds and the processing for the other stuff is about 0.0025 seconds so the chance we miss a packet is low, We are not blocking for \%0.5 of the time (not doing select for \%0.5 on average per program loop)(if we can even miss a packet and if we do we will get it back with the periodic update))
+
+\section{discussion}
+Our primary source for testing during development was our ‘example topology’ of 7 routers configured as follows.
+
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[width=0.5\textwidth]{Topology_Pic.png} % lots of other options for figure sizing
+	\caption{Sample Topology}
+\end{figure}%
+
+
+
+Where metrics are shown in red and port numbers in blue. This network was implemented by the seven config files of the form “router$x$” $x\in \{1,2,3,4,5,6,7\}$ and, in its entirety, is large enough to allow for thorough testing of the RIP routing protocol. This example network is also of particular developmental use as it tests multiple configuration criteria, such as involving both the smallest and largest possible accepted port numbers, checking that the range worked correctly and wasn’t accidentally off by one.
+
+During early development, we routinely ran only routing demons ‘1’ and ‘2’ above. This enabled us to quickly check elements of basic functionality (sending/receiving packets, updating routing tables, timeout and garbage collection etc) but obviously did not give us much insight into the correctness of our protocol implementation.
+
+Our second, deeper stage of testing (and the one used for the majority of development) involved a greater number of routing demons and multiple topological aspects. These were namely, the routers ‘1’,’2’,’3’ and ‘6’ above. This gave us a far more interesting, though still easily observable network of two ‘transit’ routers ‘1’ and ‘2’ as well as two ‘stub’ routers ‘3’ and ‘6’. By taking down either ‘3’ or ‘6’ we were able to test for the correctness of the timeout and garbage collection mechanisms as well as the propagation of link failure information in the form of triggered updates. Likewise, by taking down either ‘1’ or ‘2’, we were able to observe the ‘isolation’ of a ‘stub’ router (‘6’ or ‘3’ respectively) from the rest of the network. This stage of testing however, did stop short of the whole picture as it did not test for non-trivial path updates.
+
+Finally a ‘complete run’ of the network was used as our last stage of testing. Bringing up all routers allowed us to observe convergence times (MAYBE SOME DATA ON CONVERGENCE?) and also to check the validity of the shortest path information of each router. We could also, at this point, test the network’s adaptation to extreme topological change. A favourite such change was to bring down routers ‘4’ and ‘6’. This had the joint effect of ‘isolating 5’ (i.e making router ‘5’ unreachable from all other routers) and also changing a plethora of shortest path information (for example D(7,3) changes from 10 to 11). It was with this particular test, that a great deal of valuable debugging was achieved.
+
+A particularly useful tool for debugging was the ‘runlog\_$x$” $x\in \{1,2,3,4,5,6,7\}$files generated by the routing demon instance… Which after being initialised by the routing demon we could write the states and any errors in the routing demon so we could look back at what happened and when. Each routing demon makes its own separate log using its ID and since the log file object was part of the routing class it was easy to write to the log from the code without having to pass around the file object. 
+
+
+
+
+
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -48,7 +93,7 @@
 
 \lstset{style=mystyle}
 
-
+\newpage
 \section{Main Program}
 \lstinputlisting[language=python]{RIP_routing_demon.py}
 \newpage

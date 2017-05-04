@@ -195,7 +195,6 @@ class RIProuter:
           """check metric here?"""
           currentEntry = self.routingTable.get_entry(dest)
 
-          currentEntry = self.routingTable.get_entry(dest)
 
               
           if new_metric >= INF:
@@ -327,7 +326,7 @@ def main():
      
      while(1):
           try:
-               ## Wait for at least one of the sockets to be ready for processing
+               # Wait for at least one of the sockets to be ready for processing
                print("table reads\n",router.routingTable)
                readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
                
