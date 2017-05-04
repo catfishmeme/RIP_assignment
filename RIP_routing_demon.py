@@ -1,3 +1,16 @@
+"""
+#RIP_routing_daemon.py
+#Authors: George Drummond - gmd44
+#         Ryan Cox - rlc96
+#Last Edit: 5/4/2017
+#
+#An implimentation of the version 2 RIP routing protocol, which is loads a router 
+#in a given network from a config file and communicates with other instances of
+#the router to update the topology of the network when new routers are added or
+#go down.
+#
+"""
+
 #!/usr/bin/python
 import sys
 import select
@@ -27,6 +40,7 @@ def valid_metric(metric):
 
 
 class RIProuter:
+     '''RIP router class'''
      def __init__(self,configFile):
           self.periodic = 0
           self.updateFlag = 0
@@ -45,12 +59,10 @@ class RIProuter:
           
           
      def socket_setup(self):
+          '''Sets up a socket with each of the given port numbers'''
           self.inPorts = []
           for portn in self.inPort_numbers:
                newSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-               
-               #newSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-               
                newSocket.bind((HOST_ID, portn))
                self.inPorts += [newSocket]
                
