@@ -4,6 +4,8 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{hyperref}
 
 \pagestyle{myheadings}
 \textwidth 160mm
@@ -20,14 +22,17 @@
 \thispagestyle{empty}
 
 \begin{abstract}
-This is joint work by George Drummond and Ryan Cox in fulfilment of the course requirements of COSC364 S1 2017 and is a result of \bf{equal} contribution.
+The following pertains to Assignment 1 of COSC364 S1 2017.
+This was a joint work by George Drummond and Ryan Cox in fulfilment of the course requirements of COSC364 S1 2017 and is a result of \bf{equal} contribution.
 \end{abstract}
+
+\tableofcontents
 
 \section{ Particularly well done aspects}
 
-One of the initial successes of our design is the decent degree of modulation with which we were able to develop our program. Through the ‘RIP\_packet.py‘ and ‘writelog.py‘ programs, we were able to achieve a reasonable level of abstraction around the tasks of packet processing and logging errors. This led to far easier reading and debugging.
+One of the initial successes of our design is the decent degree of modulation with which we were able to develop our program. Through the ‘RIP\_packet.py‘ and ‘writelog.py‘ programs, we were able to achieve a reasonable level of abstraction around the tasks of packet processing and logging errors. This led to far easier reading and debugging.\\
 
-Within these modulated programs, the methods of constructing and processing the RIP response packet was a strong point in our design. The packet was represented by a python string of hex values and Python’s type conversion abilities were heavily utilised to allow for swift extraction of the relevant information. Again, this was able to be done “under the hood” by the helper program “RIP\_packet.py” avoiding much unnecessary indexing by the main program.
+Within these modulated programs, the methods of constructing and processing the RIP response packet was a strong point in our design. The packet was represented by a python string of hex values and Python’s type conversion abilities were heavily utilised to allow for swift extraction of the relevant information. Again, this was able to be done “under the hood” by the helper program “RIP\_packet.py” avoiding much unnecessary indexing by the main program.\\
 
 These good practices led to a great degree of functionality being achieved by our program. Via the tiered testing method detailed below, we were able to quickly debug and achieve a working (and pretty!) result.
 \section{Aspects to be improved}
