@@ -186,6 +186,7 @@ class RIProuter:
                self.routingTable.add_entry(peerID, cost, peerID)
           else:
                incomingEntry.metric = cost
+               incomingEntry.nextHop = peerID
                incomingEntry.timeout = 0 # Reinitialise timeout for this link
                incomingEntry.garbageFlag = 0
                incomingEntry.garbage = 0               
@@ -207,13 +208,13 @@ class RIProuter:
 
 
               
-          if new_metric >= INF:
+          if new_metric >= INF :
                #print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                write_to_log(self.log, 
                     "Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                     
                
-          if (currentEntry is None):
+          elif (currentEntry is None):
                #print("current route not in table")
                if (new_metric < INF): # Add a new entry
                     NewEntry = TableEntry(dest, new_metric, peerID)
@@ -261,7 +262,7 @@ class RIProuter:
                     
           if (new_metric >= INF):
                #print("Triggered update flag set")
-               self.updateFlag = 1 #Set some update flag                               
+               self.updateFlag = 1 #Set update flag                               
                currentEntry.garbageFlag = 1                                     
           
           
