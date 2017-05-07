@@ -136,7 +136,7 @@ class RIProuter:
           ''' Sends an update message to each neighbour'''
           i = 0
           for peerID in self.peerInfo.keys():
-               print("update sent to {}".format(peerID))
+               #print("update sent to {}".format(peerID))
                write_to_log(self.log,
                             "Sent update to {}".format(peerID))
                OutSock = self.inPorts[i] # use a different socket to send each
@@ -158,7 +158,7 @@ class RIProuter:
           for Entry in self.routingTable:
                # Implement split horizon with poisson reverse
                if (Entry.nextHop == peerID) or (Entry.garbageFlag == 1):
-                    print("split horizon entry sent to {}".format(peerID))
+                    #print("split horizon entry sent to {}".format(peerID))
                     packet += RTE(TableEntry(Entry.dest, INF, Entry.nextHop)) # set metric to INF
                else:
                     packet += RTE(Entry)
@@ -176,13 +176,13 @@ class RIProuter:
                write_to_log(self.log, "[Error] peerID {} out of range".format(peerID))
                 
                
-          print("processing packet from {}".format(peerID))
+          #print("processing packet from {}".format(peerID))
           cost = self.peerInfo[peerID][1]
           
           # Consider direct link to peer Router
           incomingEntry = self.routingTable.get_entry(peerID)
           if incomingEntry is None:
-               print("added directlink entry to router {}".format(peerID))
+               #print("added directlink entry to router {}".format(peerID))
                self.routingTable.add_entry(peerID, cost, peerID)
           else:
                incomingEntry.metric = cost
@@ -208,16 +208,16 @@ class RIProuter:
 
               
           if new_metric >= INF:
-               print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
+               #print("Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
                write_to_log(self.log, 
                     "Path ({},{}) from {} not processed as unreachable".format(dest, metric,peerID))
-                    #do something here
+                    
                
           if (currentEntry is None):
-               print("current route not in table")
+               #print("current route not in table")
                if (new_metric < INF): # Add a new entry
                     NewEntry = TableEntry(dest, new_metric, peerID)
-                    print('new Entry {}'.format(NewEntry))
+                    #print('new Entry {}'.format(NewEntry))
                     write_to_log(self.log,
                          "New route added from {} to {} with Metric {}"
                          .format(self.routerID, NewEntry, new_metric))
@@ -227,7 +227,7 @@ class RIProuter:
                     
           else: # Compare to existing entry
                     
-               print("Existing entry for {}".format(dest))
+               #print("Existing entry for {}".format(dest))
                if (currentEntry.nextHop == peerID): # Same router as existing route
                          
                     currentEntry.timeout = 0 # Reinitialise timeout
@@ -240,10 +240,10 @@ class RIProuter:
                               
                               
                elif (new_metric < currentEntry.metric):
-                    print("update route to {}".format(dest))
+                    #print("update route to {}".format(dest))
                     write_to_log(self.log,
                               "Route from {} to {} updated with new Metric {}"
-                              .format(self.routerID, NewEntry, new_metric))
+                              .format(self.routerID, dest, new_metric))
                     self.existing_route_update(currentEntry, new_metric, peerID)     
                                                            
                               
@@ -256,11 +256,11 @@ class RIProuter:
      def existing_route_update(self, currentEntry, new_metric, peerID):
           ''' updates an existing routing table entry with a new metric'''
           currentEntry.metric = new_metric
-          print("route to {} updated to metric = {}".format(currentEntry.dest,new_metric))
+          #print("route to {} updated to metric = {}".format(currentEntry.dest,new_metric))
           currentEntry.nextHop = peerID
                     
           if (new_metric >= INF):
-               print("Triggered update flag set")
+               #print("Triggered update flag set")
                self.updateFlag = 1 #Set some update flag                               
                currentEntry.garbageFlag = 1                                     
           
@@ -337,7 +337,7 @@ def main():
      while(1):
           try:
                # Wait for at least one of the sockets to be ready for processing
-               print("table reads\n",router.routingTable)
+               print("Router {}\n".format(router.routerID),router.routingTable)
                readable, writable, exceptional = select.select(router.inPorts, [], router.inPorts, selecttimeout) #block for incoming packets for half a second
                
                # Send triggered updates at this stage
@@ -361,14 +361,14 @@ def main():
                     periodicWaitTime = random.uniform(0.8*router.timers[0],1.2*router.timers[0])
                     
                     router.periodic = 0 # Reset periodic timer
-                    print("Periodic update")
+                    #print("Periodic update")
                     
                for Entry in router.routingTable:     
                     
                     if (Entry.garbageFlag == 1):
                          Entry.garbage += timeInc
                          if (Entry.garbage >= router.timers[2]): # Garbage collection
-                              print('Removed {}'.format(Entry))
+                              #print('Removed {}'.format(Entry))
                               write_to_log(router.log,
                                            "[Warning] Route from {} to {} has been removed"
                                            .format(router.routerID, Entry.dest))
@@ -377,7 +377,7 @@ def main():
                     else:
                          Entry.timeout += timeInc
                          if (Entry.timeout >= router.timers[1]): # timeout/delete event
-                              print('Timeout')
+                              #print('Timeout')
                               write_to_log(router.log, 
                                            "[Warning] Route from {} to {} has timed out"
                                            .format(router.routerID, Entry.dest))
